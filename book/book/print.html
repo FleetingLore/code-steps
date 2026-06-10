@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-2cd6e326.js";
+            window.path_to_searchindex_js = "searchindex-f8173375.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-d45b120a.js"></script>
+        <script src="toc-00424d9e.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -1118,11 +1118,12 @@ $ cargo run --example comprehensive -- --include basic
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="advanced-usage"><a class="header" href="#advanced-usage">Advanced Usage</a></h1>
-<p>This chapter covers two features that let you customise code-steps for
+<p>This chapter covers three features that let you customise code-steps for
 different contexts:</p>
 <ul>
 <li><strong>Theme Switching</strong> — change the syntax highlighting theme.</li>
 <li><strong>Nested Steps</strong> — organise complex demos hierarchically.</li>
+<li><strong>Typewriter Mode</strong> — character-by-character code display with fast-forward.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="theme-switching"><a class="header" href="#theme-switching">Theme Switching</a></h1>
@@ -1330,6 +1331,71 @@ fn main() {
 <p>Run it:</p>
 <pre><code class="language-text">$ cargo run --example nested
 </code></pre>
+<div style="break-before: page; page-break-before: always;"></div>
+<h1 id="typewriter-mode"><a class="header" href="#typewriter-mode">Typewriter Mode</a></h1>
+<p>When enabled, code is printed <strong>character-by-character</strong> with a small delay
+between each character and a longer pause at the end of each line —
+simulating a live-typing effect.</p>
+<h2 id="enabling"><a class="header" href="#enabling">Enabling</a></h2>
+<p>Enable at runtime, anywhere before the first <code>step!</code>:</p>
+<pre><code class="language-rust">fn main() {
+    code_steps::display::set_typewriter(true);
+    // … steps will now type out
+}</code></pre>
+<p>Or set a compile-time default in <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">[package.metadata.code-steps]
+typewriter = true
+</code></pre>
+<h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
+<p>Three knobs, all settable at runtime:</p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>Function</th><th>Default</th><th>Effect</th></tr>
+</thead>
+<tbody>
+<tr><td><code>set_typewriter(on)</code></td><td><code>false</code></td><td>Enable / disable</td></tr>
+<tr><td><code>set_typewriter_speed(ms)</code></td><td><code>15</code></td><td>Delay between characters</td></tr>
+<tr><td><code>set_typewriter_line_pause(ms)</code></td><td><code>150</code></td><td>Pause after each newline</td></tr>
+</tbody>
+</table>
+</div>
+<pre><code class="language-rust">code_steps::display::set_typewriter(true);
+code_steps::display::set_typewriter_speed(8);
+code_steps::display::set_typewriter_line_pause(80);</code></pre>
+<h2 id="fast-forward-with-enter"><a class="header" href="#fast-forward-with-enter">Fast-forward with Enter</a></h2>
+<p>During typewriter display, pressing <strong>Enter</strong> immediately finishes the
+current line and continues typing the next line at normal speed.  If it’s
+the last line of the step, Enter jumps straight to the waiting prompt.</p>
+<p>This means you can control the pacing interactively — let the typewriter
+run at its own speed, or tap Enter to skip ahead one line at a time.</p>
+<h2 id="how-it-works-4"><a class="header" href="#how-it-works-4">How it works</a></h2>
+<p>The typewriter is implemented in <a href="https://docs.rs/code-steps/latest/code_steps/display/fn.print_code.html"><code>print_code</code></a> — when enabled, it calls
+a character-by-character output loop instead of the normal bulk print.</p>
+<h3 id="non-blocking-stdin"><a class="header" href="#non-blocking-stdin">Non-blocking stdin</a></h3>
+<p>To detect Enter presses without blocking the typewriter, stdin is put into
+<strong>non-blocking mode</strong> via <code>fcntl(F_SETFL, O_NONBLOCK)</code>.  Between each
+character, a quick <code>read(2)</code> checks for pending input.  If a newline is
+found, fast-forward triggers; otherwise the typewriter continues.</p>
+<p>During typewriter display, the terminal is also switched to <strong>raw mode</strong>
+(<code>tcsetattr</code> with <code>ICANON | ECHO | ISIG</code> cleared).  This:</p>
+<ul>
+<li>Disables line buffering (keypresses arrive immediately)</li>
+<li>Disables terminal echo (typed characters don’t appear on screen)</li>
+<li>Disables signal generation (Ctrl+C is handled by the program, not the terminal)</li>
+</ul>
+<p>Raw mode is restored via a <code>Drop</code> guard when the typewriter finishes.</p>
+<h3 id="per-character-highlighting"><a class="header" href="#per-character-highlighting">Per-character highlighting</a></h3>
+<p>Each character is wrapped in its own syntax-highlighting escape sequence
+so the colour updates correctly as characters appear.  For performance,
+the syntect <a href="https://docs.rs/syntect/latest/syntect/highlighting/struct.ThemeSet.html"><code>ThemeSet</code></a> and <a href="https://docs.rs/syntect/latest/syntect/parsing/struct.SyntaxSet.html"><code>SyntaxSet</code></a> are loaded once via <code>OnceLock</code>.</p>
+<pre><code class="language-rust ignore">// Simplified: per-character output with highlighting
+for ch in text.chars() {
+    if try_read_enter() { fast_forward = true; break; }
+    write!(stderr, "{}", highlight(&amp;[(style, &amp;ch.to_string())]));
+    flush();
+    sleep(speed);
+}</code></pre>
 
                     </main>
 

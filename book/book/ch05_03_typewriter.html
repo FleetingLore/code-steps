@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>ignore!: Execute Without Showing - code-steps Tutorial</title>
+        <title>Typewriter Mode - code-steps Tutorial</title>
 
 
         <!-- Custom HTML head -->
@@ -174,133 +174,79 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="ignore-execute-without-showing"><a class="header" href="#ignore-execute-without-showing"><code>ignore!</code>: Execute Without Showing</a></h1>
-<p><code>ignore!</code> is the complement of <a href="../ch02_02_skip.html"><code>skip!</code></a>: code <strong>always
-executes</strong> at runtime but is <strong>hidden</strong> from the terminal display.</p>
-<h2 id="syntax"><a class="header" href="#syntax">Syntax</a></h2>
-<pre><code class="language-rust">ignore!(("tag") { /* code runs but is hidden */ })</code></pre>
-<h2 id="how-it-works"><a class="header" href="#how-it-works">How it works</a></h2>
-<p><code>ignore!</code> operates at two levels:</p>
+                        <h1 id="typewriter-mode"><a class="header" href="#typewriter-mode">Typewriter Mode</a></h1>
+<p>When enabled, code is printed <strong>character-by-character</strong> with a small delay
+between each character and a longer pause at the end of each line —
+simulating a live-typing effect.</p>
+<h2 id="enabling"><a class="header" href="#enabling">Enabling</a></h2>
+<p>Enable at runtime, anywhere before the first <code>step!</code>:</p>
+<pre><code class="language-rust">fn main() {
+    code_steps::display::set_typewriter(true);
+    // … steps will now type out
+}</code></pre>
+<p>Or set a compile-time default in <code>Cargo.toml</code>:</p>
+<pre><code class="language-toml">[package.metadata.code-steps]
+typewriter = true
+</code></pre>
+<h2 id="configuration"><a class="header" href="#configuration">Configuration</a></h2>
+<p>Three knobs, all settable at runtime:</p>
 <div class="table-wrapper">
 <table>
 <thead>
-<tr><th>Level</th><th>What happens</th></tr>
+<tr><th>Function</th><th>Default</th><th>Effect</th></tr>
 </thead>
 <tbody>
-<tr><td>Runtime</td><td>Block always executes (tags NOT checked)</td></tr>
-<tr><td>Display</td><td>Replaced with <code>// (ignored)</code> by compile-time Phase 1</td></tr>
+<tr><td><code>set_typewriter(on)</code></td><td><code>false</code></td><td>Enable / disable</td></tr>
+<tr><td><code>set_typewriter_speed(ms)</code></td><td><code>15</code></td><td>Delay between characters</td></tr>
+<tr><td><code>set_typewriter_line_pause(ms)</code></td><td><code>150</code></td><td>Pause after each newline</td></tr>
 </tbody>
 </table>
 </div>
-<p>The expansion is intentionally minimal — the block runs as-is with zero
-overhead:</p>
-<pre><code class="language-rust ignore">// User writes:
-ignore!(("setup") { heavy_init(); })
-
-// Expands to:
-{ { heavy_init(); } }</code></pre>
-<p>Meanwhile, <code>step!</code>’s Phase 1 scans the raw source text and replaces every
-<code>ignore!(…) { … }</code> block with <code>// (ignored)</code>.  This is pure text replacement
-at compile time.</p>
-<h2 id="use-case-hiding-repeated-setup"><a class="header" href="#use-case-hiding-repeated-setup">Use case: hiding repeated setup</a></h2>
-<p>When you have a series of steps that all need the same expensive setup
-(loading a config, building an index), showing that setup in <em>every</em> step
-creates visual noise.  <code>ignore!</code> hides the repetition — the setup still runs
-every time, but only appears in the terminal once.</p>
-<h2 id="full-example"><a class="header" href="#full-example">Full example</a></h2>
-<pre><code class="language-rust">//! ignore! — execute code, hide from display.
-//!
-//! Run: `cargo run --example ignore`
-//!
-//! # What this demonstrates
-//!
-//! When you have a series of steps that all need the same setup (loading a
-//! config, building an index, opening a connection), showing that setup in
-//! *every* step creates visual noise.  `ignore!` solves this: the setup
-//! still runs every time, but it only appears in the terminal once — or
-//! not at all.
-//!
-//! # How tagging changes behaviour
-//!
-//! Without filter init, all `ignore!` blocks run and are hidden.
-//! With `--exclude setup`, the block under `ignore!(("setup") { … })`
-//! still executes (ignore always runs), but the placeholder `// (ignored)`
-//! disappears from the display because the surrounding `step!` is tagged
-//! `"setup"`, and `--exclude setup` skips the entire step.
-//!
-//! Try:
-//!   cargo run --example ignore
-//!   cargo run --example ignore -- --exclude setup
-//!   cargo run --example ignore -- --exclude analytics
-
-use code_steps::step;
-
-fn main() {
-    code_steps::display::print_file_header("ignore! — hiding repeated setup");
-
-    // ── Scenario: three analysis steps that all need the same index ───
-    //
-    // Without ignore!, the build_index() call would appear in every step's
-    // display, making the output repetitive and hard to follow.
-
-    // ── Step 1: build once, reuse in analysis 1 ────────────────────────
-    step!("Build search index", {
-        // Expensive one-time build — shown here to explain what's happening.
-        let index = build_fake_index();
-        println!("Index built: {index} entries.");
-    });
-
-    // ── Step 2–4: reuse index via ignore! — visual noise eliminated ───
-
-    step!("Query 1: exact match", {
-        // The rebuild is necessary (this is a demo, no global state),
-        // but showing it three times would be repetitive.
-        code_steps::ignore!(("rebuild-index") {
-            let _index = build_fake_index(); // runs, hidden from display
-        });
-
-        let results = vec!["rustic", "rust", "trust"];
-        println!("Results for 'rust': {results:?}");
-    });
-
-    step!("Query 2: fuzzy match", {
-        code_steps::ignore!(("rebuild-index") {
-            let _index = build_fake_index(); // runs, hidden
-        });
-
-        let results = vec!["hello", "help", "held"];
-        println!("Results for 'hel~': {results:?}");
-    });
-
-    step!("Query 3: regex", {
-        code_steps::ignore!(("rebuild-index") {
-            let _index = build_fake_index(); // runs, hidden
-        });
-
-        let results = vec!["apple", "apply", "app"];
-        println!("Results for '^app': {results:?}");
-    });
-}
-
-fn build_fake_index() -&gt; usize {
-    std::thread::sleep(std::time::Duration::from_millis(150));
-    42
+<pre><code class="language-rust">code_steps::display::set_typewriter(true);
+code_steps::display::set_typewriter_speed(8);
+code_steps::display::set_typewriter_line_pause(80);</code></pre>
+<h2 id="fast-forward-with-enter"><a class="header" href="#fast-forward-with-enter">Fast-forward with Enter</a></h2>
+<p>During typewriter display, pressing <strong>Enter</strong> immediately finishes the
+current line and continues typing the next line at normal speed.  If it’s
+the last line of the step, Enter jumps straight to the waiting prompt.</p>
+<p>This means you can control the pacing interactively — let the typewriter
+run at its own speed, or tap Enter to skip ahead one line at a time.</p>
+<h2 id="how-it-works"><a class="header" href="#how-it-works">How it works</a></h2>
+<p>The typewriter is implemented in <a href="https://docs.rs/code-steps/latest/code_steps/display/fn.print_code.html"><code>print_code</code></a> — when enabled, it calls
+a character-by-character output loop instead of the normal bulk print.</p>
+<h3 id="non-blocking-stdin"><a class="header" href="#non-blocking-stdin">Non-blocking stdin</a></h3>
+<p>To detect Enter presses without blocking the typewriter, stdin is put into
+<strong>non-blocking mode</strong> via <code>fcntl(F_SETFL, O_NONBLOCK)</code>.  Between each
+character, a quick <code>read(2)</code> checks for pending input.  If a newline is
+found, fast-forward triggers; otherwise the typewriter continues.</p>
+<p>During typewriter display, the terminal is also switched to <strong>raw mode</strong>
+(<code>tcsetattr</code> with <code>ICANON | ECHO | ISIG</code> cleared).  This:</p>
+<ul>
+<li>Disables line buffering (keypresses arrive immediately)</li>
+<li>Disables terminal echo (typed characters don’t appear on screen)</li>
+<li>Disables signal generation (Ctrl+C is handled by the program, not the terminal)</li>
+</ul>
+<p>Raw mode is restored via a <code>Drop</code> guard when the typewriter finishes.</p>
+<h3 id="per-character-highlighting"><a class="header" href="#per-character-highlighting">Per-character highlighting</a></h3>
+<p>Each character is wrapped in its own syntax-highlighting escape sequence
+so the colour updates correctly as characters appear.  For performance,
+the syntect <a href="https://docs.rs/syntect/latest/syntect/highlighting/struct.ThemeSet.html"><code>ThemeSet</code></a> and <a href="https://docs.rs/syntect/latest/syntect/parsing/struct.SyntaxSet.html"><code>SyntaxSet</code></a> are loaded once via <code>OnceLock</code>.</p>
+<pre><code class="language-rust ignore">// Simplified: per-character output with highlighting
+for ch in text.chars() {
+    if try_read_enter() { fast_forward = true; break; }
+    write!(stderr, "{}", highlight(&amp;[(style, &amp;ch.to_string())]));
+    flush();
+    sleep(speed);
 }</code></pre>
-<p>Run it:</p>
-<pre><code class="language-text">$ cargo run --example ignore
-</code></pre>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="ch02_02_skip.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="ch05_02_nesting.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                             </a>
 
-                            <a rel="next prefetch" href="ch03_tag_system.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                                <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
-                            </a>
 
                         <div style="clear: both"></div>
                     </nav>
@@ -308,13 +254,10 @@ fn build_fake_index() -&gt; usize {
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="ch02_02_skip.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="ch05_02_nesting.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M41.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 256 246.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></span>
                     </a>
 
-                    <a rel="next prefetch" href="ch03_tag_system.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
-                        <span class=fa-svg><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc. --><path d="M278.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-160 160c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L210.7 256 73.4 118.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l160 160z"/></svg></span>
-                    </a>
             </nav>
 
         </div>

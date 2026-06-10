@@ -20,3 +20,4 @@
 - [Advanced Usage](ch05_advanced.md)
   - [Theme Switching](ch05_01_themes.md)
   - [Nested Steps](ch05_02_nesting.md)
+  - [Typewriter Mode](ch05_03_typewriter.md)
