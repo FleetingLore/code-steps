@@ -1,47 +1,101 @@
-//! The `step!` proc macro — dual-phase: display prep + code generation.
+//! The `step!` proc macro — display + execute a named code block.
 //!
-//! `step!` is the most complex macro in this crate.  It does two things in
-//! two distinct phases, at two different times:
+//! `step!` is the primary macro: it shows syntax-highlighted code in the
+//! terminal, executes it, prints a green `ok`, and **automatically pauses**
+//! for Enter.  Everything else — `wait!`, `skip!`, `ignore!` — is used
+//! *inside* a `step!` block for finer control.
 //!
-//! ## Phase 1 — compile-time source processing
+//! The auto-pause means you rarely need `wait!()` at the end of a step.
+//! Use `wait!()` *inside* a step only when you want to pause mid-step
+//! (e.g. between two sub-operations), or `wait!("tag")` for a conditional
+//! pause controlled by the filter.
 //!
-//! The raw source text between the block's braces is run through the
-//! [`source`](super::source) pipeline:
+//! # Two forms
 //!
-//! ```text
-//! raw source  →  [dedent] → [strip_comments] → [strip_ignores] → display
-//! ```
+//! | Form | Behaviour |
+//! |------|-----------|
+//! | `step!("desc", { … })` | Always displays and executes |
+//! | `step!("desc", "tag", { … })` | Displays/executes **only if** the tag passes the global filter |
 //!
-//! The resulting `display_str` is a `&str` literal baked into the binary.
-//! No runtime cost for processing — the terminal just prints a pre-computed
-//! string.  This is why you can use comments freely in step blocks: they get
-//! stripped at compile time.
+//! The first form is for steps that should always run.  The second form lets
+//! you make a step **optional** — controlled from the command line without
+//! changing code.
 //!
-//! ## Phase 2 — runtime expansion
+//! # Tag filtering — how `step!` connects to CLI args
 //!
-//! The parsed AST ([`StepInput`]) drives code generation via [`quote`].
-//! The expansion wraps the user's block with display calls:
+//! Tags bridge your source code to runtime command-line flags.  The workflow:
+//!
+//! 1. **In code** — attach string tags to `step!`, `wait!`, `skip!`, `ignore!`:
 //!
 //! ```rust,ignore
-//! {
-//!     print_step_header(comment);
-//!     print_code(display_str);      // from Phase 1
-//!     let __result = { user code };  // the original block, unmodified
-//!     print_step_done();
-//!     __result
-//! }
+//! init_wait_filter();
+//!
+//! step!("Basic setup", "basic", {
+//!     load_data();
+//!     wait!("basic");
+//! });
+//!
+//! step!("Advanced analysis", "advanced", {
+//!     run_heavy_computation();
+//!     wait!("advanced");
+//! });
 //! ```
 //!
-//! If the step has **tags**, the body is additionally wrapped in a runtime
-//! filter check (`filter_matches`) so the entire step can be skipped via
-//! `--include` / `--exclude` on the command line.
+//! 2. **On the command line** — pass `--include` / `--exclude` after `--`:
 //!
-//! ## Why two phases?
+//! ```text
+//! cargo run -- --include basic
+//! cargo run -- --include advanced --exclude basic
+//! ```
 //!
-//! Phase 1 cannot run on the parsed AST because `syn` doesn't preserve
-//! whitespace and comments.  But we *need* both: the raw source for display
-//! (Phase 1) and the typed AST for code generation (Phase 2).  So `step!`
-//! processes the same input twice, through two different representations.
+//! 3. **At runtime** — the filter checks each step's tags against the CLI args.
+//!    A step with a tag that **doesn't match** is completely skipped — no
+//!    header, no code display, no execution.
+//!
+//! ## Filter rules
+//!
+//! For a step tagged `["basic"]` with `--include basic --exclude debug`:
+//!
+//! - `include` is non-empty → step runs only if **any** of its tags is in the
+//!   include list.  Here `"basic"` is in `["basic"]`, so it passes.
+//! - `exclude` blocks the step if **any** tag matches.  Here `"debug"` doesn't
+//!   match, so it passes.
+//! - Without `--include` (empty), **all tags pass** the include check.
+//! - A step with **no tags** (first form) always runs — filter doesn't apply.
+//!
+//! ## Comparison with `skip!` and `ignore!`
+//!
+//! All three can respond to tags, but they do different things:
+//!
+//! | Macro   | Tagged behaviour |
+//! |---------|------------------|
+//! | `step!` | Entire step skipped: nothing shown, nothing run |
+//! | `skip!` | Code **shown** but **not executed** when tag is active |
+//! | `ignore!` | Code **executed** but **hidden** when tag is active |
+//!
+//! `step!` is the coarse-grained switch — turn entire sections on/off.
+//! `skip!`/`ignore!` are fine-grained — control visibility vs execution
+//! *within* a step.
+//!
+//! # How it works internally
+//!
+//! `step!` does two things at two different times:
+//!
+//! **Phase 1 — compile-time**: the raw source text is run through the
+//! [`source`](super::source) pipeline (`dedent` → `strip_comments` →
+//! `strip_ignores`) and baked into the binary as a `&str`.  No runtime
+//! cost — the terminal just prints a pre-computed string.
+//!
+//! **Phase 2 — runtime**: the parsed AST drives code generation.  Tags
+//! wrap the body in `if filter_matches(&[...]) { … }` so the step only
+//! executes when the filter allows.
+//!
+//! # Why two phases?
+//!
+//! `syn` (the Rust parser used by proc macros) discards whitespace and
+//! comments.  But terminal display *needs* the original formatting.  So
+//! `step!` processes the same input twice: once as raw text (Phase 1)
+//! and once as a typed AST (Phase 2).
 //!
 //! [`quote`]: https://docs.rs/quote
 
@@ -113,19 +167,23 @@ pub fn step_impl(input: TokenStream) -> TokenStream {
 
     let expanded = if tag_refs.is_empty() {
         quote! {{
+            let __step_guard = ::code_steps::display::enter_step(#comment_str);
             ::code_steps::display::print_step_header(#comment_str);
             ::code_steps::display::print_code(#display_str);
             let __result = #block;
             ::code_steps::display::print_step_done();
+            ::code_steps::display::press_any_key_if(&[]);
             __result
         }}
     } else {
         quote! {{
             if ::code_steps::display::filter_matches(&[#(#tag_refs),*]) {
+                let __step_guard = ::code_steps::display::enter_step(#comment_str);
                 ::code_steps::display::print_step_header(#comment_str);
                 ::code_steps::display::print_code(#display_str);
                 let __result = #block;
                 ::code_steps::display::print_step_done();
+                ::code_steps::display::press_any_key_if(&[]);
                 __result
             }
         }}

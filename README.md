@@ -10,13 +10,12 @@ code-steps = "0.1"
 ```
 
 ```rust
-use code_steps::{step, wait};
+use code_steps::step;
 
 fn main() {
     step!("Create and save an image", {
         let img = Image::new(128, 128);
         img.save("output.png")?;
-        wait!();
     });
 
     step!("Load it back", {
@@ -32,19 +31,20 @@ Terminal output:
 [Create and save an image]                         ← cyan comment
    let img = Image::new(128, 128);                  ← syntax-highlighted
    img.save("output.png")?;
-      ...                                           ← wait! pause
    ok                                               ← green
+      ...                                           ← auto-pause
 
 [Load it back]
    let img = Image::load("output.png")?;
    assert_eq!(img.width(), 128);
    ok
+      ...                                           ← auto-pause
 ```
 
 ## Features
 
-- **`step!`** — display + execute a code block as a named step
-- **`wait!`** — pause until Enter
+- **`step!`** — display + execute a code block, auto-pauses at the end
+- **`wait!`** — pause mid-step (or conditional pause via tags)
 - **`skip!(("tag") { … })`** — shown, not executed (when tag active via `--include`)
 - **`ignore!(("tag") { … })`** — executed, hidden from display
 - **Tag filter** — control which calls are active from the command line (`--include a,b --exclude c`)
@@ -52,24 +52,118 @@ Terminal output:
 
 ## Filtering
 
-Call `init_wait_filter()` once at the top of `main()`:
+### Tagging steps
+
+`step!` has two forms:
 
 ```rust
-use code_steps::{init_wait_filter, step, wait};
+step!("Always runs", {
+    // no tags → always displays and executes
+});
+
+step!("Conditional step", "tag1", "tag2", {
+    // only runs if filter allows these tags
+});
+```
+
+Tags connect your source code to command-line flags.  Call
+`init_wait_filter()` once at the top of `main()`, then control which
+steps run from the command line:
+
+```rust
+use code_steps::{init_wait_filter, step, ignore};
 
 fn main() {
     init_wait_filter();
 
-    step!("demo", {
+    step!("Setup", "basic", "advanced", {
         ignore!(("setup") { heavy_init(); })
-        wait!("check");
+        println!("Ready.");
+    });
+
+    step!("Basic analysis", "basic", {
+        let data = load_sample();
+        println!("Analysing {data:?}…");
+    });
+
+    step!("Advanced analysis", "advanced", {
+        run_heavy_computation();
+        println!("Done.");
+    });
+
+    step!("Cleanup", {
+        save_results();
     });
 }
 ```
 
+### Controlling from the command line
+
+Pass `--include` / `--exclude` after `--`:
+
 ```text
-cargo run --example demo -- --include check --exclude setup
+# Only show steps tagged "basic"
+cargo run -- --include basic
+
+# Show steps tagged "basic" or "advanced", but hide "debug" content
+cargo run -- --include basic,advanced --exclude debug
+
+# No flags → all steps run, all pauses active (default)
+cargo run
 ```
+
+### Filter rules
+
+- **`--include a,b`** — only steps/tags matching `a` or `b` are active.
+  If omitted, **all tags pass**.
+- **`--exclude c`** — steps/tags matching `c` are blocked, even if they
+  passed `--include`.
+- A step with **no tags** always runs — the filter doesn't apply.
+
+### How each macro responds to the filter
+
+| Macro   | When tag is active (`--include`) | When tag is blocked |
+|---------|----------------------------------|---------------------|
+| `step!` | Shows + executes                 | Entirely skipped    |
+| `wait!` | Pauses for Enter                 | No pause            |
+| `skip!` | Code shown, **not** executed     | Code executed       |
+| `ignore!` | Code executed, **hidden**      | Code executed       |
+
+## Nested steps
+
+`step!` can be nested — each inner step shows its path in the auto-pause:
+
+```rust
+step!("Compile", {
+    step!("Tokenise", { /* … */ });
+    step!("Parse",    { /* … */ });
+    step!("Type-check", {
+        step!("Check main", { /* … */ });
+    });
+});
+```
+
+Terminal output:
+
+```
+[Compile]
+   …
+   ok
+   Compile waiting
+
+   [Tokenise]
+      …
+      ok
+      Compile : Tokenise waiting       ← path shows nesting
+
+   [Type-check]
+      [Check main]
+         …
+         ok
+         Compile : Type-check : Check main waiting   ← three levels deep
+```
+
+See `examples/nested.rs` for a full demo.
 
 ## Themes
 
@@ -99,8 +193,8 @@ Any syntect theme key works.  Commonly used ones:
 
 | Macro                        | Shows | Executes | Pauses |
 |------------------------------|-------|----------|--------|
-| `step!("desc", { … })`       | yes   | yes      | no     |
-| `step!("desc", "tag", { … })`| yes   | cond.    | no     |
+| `step!("desc", { … })`       | yes   | yes      | auto    |
+| `step!("desc", "tag", { … })`| yes   | cond.    | auto    |
 | `wait!()`                    | yes   | —        | yes    |
 | `wait!("t1", "t2")`          | yes   | —        | cond.  |
 | `skip!(("t1") { … })`        | yes   | cond. neg| no     |

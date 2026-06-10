@@ -28,6 +28,7 @@
 //!
 //! [`step!`]: https://docs.rs/code-steps/latest/code_steps/macro.step.html
 
+use std::cell::RefCell;
 use std::io::{self, Write};
 use std::sync::OnceLock;
 
@@ -91,6 +92,36 @@ fn print_highlighted(code: &str) {
 //   2. print_code         — syntax-highlighted body
 //   3. (user code runs, possibly with wait!/skip!/ignore!)
 //   4. print_step_done    — green "   ok" line
+//   5. press_any_key_if   — auto-pause until Enter
+
+// ── Step nesting path ────────────────────────────────────────────────────
+//
+// When `step!` calls are nested, a thread-local stack tracks the path.
+// `enter_step()` pushes the step name and returns a guard that pops on
+// drop.  `press_any_key_if()` reads the stack to display the current
+// nesting path (e.g. "Load : Parse : Validate waiting").
+
+thread_local! {
+    static STEP_PATH: RefCell<Vec<String>> = RefCell::new(Vec::new());
+}
+
+/// RAII guard: pushes the step name on creation, pops on drop.
+/// Created by [`enter_step`] and embedded in the `step!` expansion.
+pub struct StepGuard;
+
+impl Drop for StepGuard {
+    fn drop(&mut self) {
+        STEP_PATH.with(|p| {
+            p.borrow_mut().pop();
+        });
+    }
+}
+
+/// Push `name` onto the nesting stack and return a guard that pops on drop.
+pub fn enter_step(name: &str) -> StepGuard {
+    STEP_PATH.with(|p| p.borrow_mut().push(name.to_string()));
+    StepGuard
+}
 
 /// Bold header with blank lines before and after.
 pub fn print_file_header(filename: &str) {
@@ -178,15 +209,17 @@ pub fn init_wait_filter() {
     let _ = FILTER.set(filter);
 }
 
-/// Called by the `wait!()` macro expansion.
-/// Prints `"    ..."` in yellow and waits for Enter if the filter allows.
+/// Called by the `wait!()` macro expansion and `step!`'s auto-pause.
+/// Prints the current nesting path in yellow and waits for Enter if the
+/// filter allows.
 pub fn press_any_key_if(tags: &[&str]) {
     if let Some(filter) = FILTER.get() {
         if !filter.matches(tags) {
             return;
         }
     }
-    let _ = writeln!(io::stderr(), "\x1b[33m    ...\x1b[0m");
+    let path = STEP_PATH.with(|p| p.borrow().join(" : "));
+    let _ = writeln!(io::stderr(), "\x1b[33m    {path} waiting\x1b[0m");
     let mut buf = String::new();
     let _ = io::stdin().read_line(&mut buf);
 }

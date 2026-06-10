@@ -1,0 +1,12 @@
+[book]
+authors = ["FleetingLore"]
+language = "en"
+src = "src"
+title = "code-steps Tutorial"
+
+[output.html]
+mathjax-support = false
+
+[output.html.playground]
+editable = true
+runnable = false

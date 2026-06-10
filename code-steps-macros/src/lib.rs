@@ -19,7 +19,7 @@
 //!
 //! | Macro     | Shows code  | Executes code | Pauses  |
 //! |-----------|------------|---------------|---------|
-//! | `step!`   | yes        | yes           | no      |
+//! | `step!`   | yes        | yes           | auto    |
 //! | `wait!`   | yes        | —             | yes     |
 //! | `skip!`   | yes        | conditional   | no      |
 //! | `ignore!` | no (hidden)| yes           | no      |
@@ -46,11 +46,14 @@
 //!
 //! ```rust,ignore
 //! {
+//!     let __step_guard = enter_step(comment);
 //!     print_step_header(comment);
 //!     print_code(display_str);      // from Phase 1
 //!     let __result = { user code };  // the parsed AST, unmodified
 //!     print_step_done();
+//!     press_any_key_if(&[]);         // auto-pause, shows path if nested
 //!     __result
+//!     // __step_guard drops here → pops path
 //! }
 //! ```
 //!
