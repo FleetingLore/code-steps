@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-c57fbc93.js";
+            window.path_to_searchindex_js = "searchindex-2cd6e326.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d45b120a.js"></script>
@@ -188,23 +188,25 @@ The auto-pause shows the full nesting path so you always know where you are.</p>
 });</code></pre>
 <h2 id="path-display"><a class="header" href="#path-display">Path display</a></h2>
 <p>When nested, the yellow pause prompt shows the full path:</p>
-<pre><code class="language-text">[Compile]
-   ok
+<pre><code class="language-text">==========================================
+[Compile]
    Compile waiting                    ← depth 1
 
+   ===========================================
    [Tokenise]
-      ok
       Compile : Tokenise waiting      ← depth 2: "Outer : Inner"
 
+   ===========================================
    [Parse]
-      ok
       Compile : Parse waiting
 </code></pre>
 <h2 id="three-level-nesting"><a class="header" href="#three-level-nesting">Three-level nesting</a></h2>
-<pre><code class="language-text">[Compile]
+<pre><code class="language-text">==========================================
+[Compile]
+   ===========================================
    [Type-check]
+      ===========================================
       [Check main]
-         ok
          Compile : Type-check : Check main waiting   ← depth 3
 </code></pre>
 <h2 id="how-it-works"><a class="header" href="#how-it-works">How it works</a></h2>

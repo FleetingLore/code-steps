@@ -40,17 +40,14 @@ $ cargo run
 [Hello, code-steps!]
    println!("This is my first step.");
 This is my first step.
-   ok
-
    Hello, code-steps! waiting
 ```
 
-Every `step!` block does four things:
+Every `step!` block does three things:
 
-1. Prints a cyan `[description]` header.
-2. Prints the source code with **syntax highlighting**.
-3. Executes the code.
-4. Prints a green `ok` and **auto-pauses** — press Enter to continue.
+1. Prints a cyan `=====` separator and a `[description]` header.
+2. Prints the source code with **syntax highlighting** (typewriter-style if enabled).
+3. Executes the code and **auto-pauses** — press Enter to continue.
 
 All display output goes to **stderr**, so your `println!` output (stdout) stays
 clean.

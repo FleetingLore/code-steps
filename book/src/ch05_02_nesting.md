@@ -21,26 +21,28 @@ step!("Compile", {
 When nested, the yellow pause prompt shows the full path:
 
 ```text
+==========================================
 [Compile]
-   ok
    Compile waiting                    ← depth 1
 
+   ===========================================
    [Tokenise]
-      ok
       Compile : Tokenise waiting      ← depth 2: "Outer : Inner"
 
+   ===========================================
    [Parse]
-      ok
       Compile : Parse waiting
 ```
 
 ## Three-level nesting
 
 ```text
+==========================================
 [Compile]
+   ===========================================
    [Type-check]
+      ===========================================
       [Check main]
-         ok
          Compile : Type-check : Check main waiting   ← depth 3
 ```
 

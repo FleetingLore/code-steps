@@ -6,13 +6,12 @@ manually insert `wait!()` at step boundaries.
 ## How it looks
 
 ```text
+==========================================
 [Load data]
    let data = vec![1, 2, 3];
    println!("{data:?}");
 [1, 2, 3]
-   ok
-
-   Load data waiting        ← yellow prompt, press Enter to continue
+   Load data waiting        ← green prompt, press Enter to continue
 ```
 
 The pause prompt shows the step name.  For nested steps, it shows the full

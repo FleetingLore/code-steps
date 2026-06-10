@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-c57fbc93.js";
+            window.path_to_searchindex_js = "searchindex-2cd6e326.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d45b120a.js"></script>
@@ -202,16 +202,13 @@ fn main() {
 [Hello, code-steps!]
    println!("This is my first step.");
 This is my first step.
-   ok
-
    Hello, code-steps! waiting
 </code></pre>
-<p>Every <code>step!</code> block does four things:</p>
+<p>Every <code>step!</code> block does three things:</p>
 <ol>
-<li>Prints a cyan <code>[description]</code> header.</li>
-<li>Prints the source code with <strong>syntax highlighting</strong>.</li>
-<li>Executes the code.</li>
-<li>Prints a green <code>ok</code> and <strong>auto-pauses</strong> — press Enter to continue.</li>
+<li>Prints a cyan <code>=====</code> separator and a <code>[description]</code> header.</li>
+<li>Prints the source code with <strong>syntax highlighting</strong> (typewriter-style if enabled).</li>
+<li>Executes the code and <strong>auto-pauses</strong> — press Enter to continue.</li>
 </ol>
 <p>All display output goes to <strong>stderr</strong>, so your <code>println!</code> output (stdout) stays
 clean.</p>

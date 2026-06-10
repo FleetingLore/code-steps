@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-c57fbc93.js";
+            window.path_to_searchindex_js = "searchindex-2cd6e326.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d45b120a.js"></script>
@@ -178,13 +178,12 @@
 <p><code>step!</code> automatically pauses at the end of every step.  No need to
 manually insert <code>wait!()</code> at step boundaries.</p>
 <h2 id="how-it-looks"><a class="header" href="#how-it-looks">How it looks</a></h2>
-<pre><code class="language-text">[Load data]
+<pre><code class="language-text">==========================================
+[Load data]
    let data = vec![1, 2, 3];
    println!("{data:?}");
 [1, 2, 3]
-   ok
-
-   Load data waiting        ← yellow prompt, press Enter to continue
+   Load data waiting        ← green prompt, press Enter to continue
 </code></pre>
 <p>The pause prompt shows the step name.  For nested steps, it shows the full
 path (see <a href="../ch05_02_nesting.html">5.2 — Nested Steps</a>).</p>

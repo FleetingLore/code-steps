@@ -35,7 +35,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-c57fbc93.js";
+            window.path_to_searchindex_js = "searchindex-2cd6e326.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d45b120a.js"></script>
@@ -176,12 +176,11 @@
                     <main>
                         <h1 id="the-step-macro"><a class="header" href="#the-step-macro">The <code>step!</code> Macro</a></h1>
 <p><code>step!</code> is the <strong>primary macro</strong> — everything else is used inside it.</p>
-<p>Every <code>step!</code> does four things:</p>
+<p>Every <code>step!</code> does three things:</p>
 <ol>
-<li>Prints a cyan <code>[description]</code> header.</li>
-<li>Prints the source code with syntax highlighting.</li>
-<li>Executes the code block.</li>
-<li>Prints a green <code>ok</code> and auto-pauses.</li>
+<li>Prints a cyan <code>=====</code> separator and a <code>[description]</code> header.</li>
+<li>Prints the source code with syntax highlighting (typewriter-style if enabled).</li>
+<li>Executes the code block and auto-pauses.</li>
 </ol>
 <p>The next three sections cover <code>step!</code> in detail:</p>
 <ul>

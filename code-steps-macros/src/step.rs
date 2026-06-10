@@ -82,13 +82,17 @@
 //! `step!` does two things at two different times:
 //!
 //! **Phase 1 — compile-time**: the raw source text is run through the
-//! [`source`](super::source) pipeline (`dedent` → `strip_comments` →
-//! `strip_ignores`) and baked into the binary as a `&str`.  No runtime
-//! cost — the terminal just prints a pre-computed string.
+//! [`source`](super::source) pipeline (`dedent` → `restore_newlines` →
+//! `collapse_continuations` → `strip_comments` → `strip_ignores` →
+//! `strip_nested_steps`) and baked into the binary as a `&str`.  No
+//! runtime cost — the terminal just prints a pre-computed string.
 //!
-//! **Phase 2 — runtime**: the parsed AST drives code generation.  Tags
-//! wrap the body in `if filter_matches(&[...]) { … }` so the step only
-//! executes when the filter allows.
+//! **Phase 2 — runtime**: the parsed AST drives code generation.  A
+//! cyan `=====` separator is printed, then the header, then the
+//! display string (with typewriter effect if enabled), then the user's
+//! code executes, then an auto-pause shows the nesting path.  Tags wrap
+//! the body in `if filter_matches(&[...]) { … }` for conditional
+//! execution.
 //!
 //! # Why two phases?
 //!
@@ -155,8 +159,11 @@ pub fn step_impl(input: TokenStream) -> TokenStream {
     let code_str = inner.trim_start_matches('\n').to_string();
 
     let s = source::dedent(&code_str);
+    let s = source::restore_newlines(&s);
+    let s = source::collapse_continuations(&s);
     let s = source::strip_comments(&s);
-    let display_str = source::strip_ignores(&s);
+    let s = source::strip_ignores(&s);
+    let display_str = source::strip_nested_steps(&s);
 
     // ── Phase 2: produce the runtime expansion ──
 
@@ -168,10 +175,10 @@ pub fn step_impl(input: TokenStream) -> TokenStream {
     let expanded = if tag_refs.is_empty() {
         quote! {{
             let __step_guard = ::code_steps::display::enter_step(#comment_str);
+            ::code_steps::display::print_step_separator();
             ::code_steps::display::print_step_header(#comment_str);
             ::code_steps::display::print_code(#display_str);
             let __result = #block;
-            ::code_steps::display::print_step_done();
             ::code_steps::display::press_any_key_if(&[]);
             __result
         }}
@@ -179,10 +186,10 @@ pub fn step_impl(input: TokenStream) -> TokenStream {
         quote! {{
             if ::code_steps::display::filter_matches(&[#(#tag_refs),*]) {
                 let __step_guard = ::code_steps::display::enter_step(#comment_str);
+                ::code_steps::display::print_step_separator();
                 ::code_steps::display::print_step_header(#comment_str);
                 ::code_steps::display::print_code(#display_str);
                 let __result = #block;
-                ::code_steps::display::print_step_done();
                 ::code_steps::display::press_any_key_if(&[]);
                 __result
             }

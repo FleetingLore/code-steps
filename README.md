@@ -6,7 +6,7 @@ Notebook-style code step display for Rust. Show syntax-highlighted code in the t
 
 ```toml
 [dependencies]
-code-steps = "0.1"
+code-steps = "0.3"
 ```
 
 ```rust
@@ -28,26 +28,31 @@ fn main() {
 Terminal output:
 
 ```
-[Create and save an image]                         ← cyan comment
+==========================================
+[Create and save an image]
    let img = Image::new(128, 128);                  ← syntax-highlighted
    img.save("output.png")?;
-   ok                                               ← green
-      ...                                           ← auto-pause
+   Create and save an image waiting                 ← auto-pause
 
+==========================================
 [Load it back]
    let img = Image::load("output.png")?;
    assert_eq!(img.width(), 128);
-   ok
-      ...                                           ← auto-pause
+   Load it back waiting
 ```
+
+Each step shows a cyan `=====` separator, a cyan `[description]` header,
+syntax-highlighted code, and an auto-pause prompt.  No `ok` line — the
+separator signals the next step.
 
 ## Features
 
-- **`step!`** — display + execute a code block, auto-pauses at the end
-- **`wait!`** — pause mid-step (or conditional pause via tags)
-- **`skip!(("tag") { … })`** — shown, not executed (when tag active via `--include`)
-- **`ignore!(("tag") { … })`** — executed, hidden from display
-- **Tag filter** — control which calls are active from the command line (`--include a,b --exclude c`)
+- **`step!`** — display + execute, with auto-pause and nested path tracking
+- **`wait!`** — mid-step pause (conditional via tags)
+- **`skip!(("tag") { … })`** — code shown, conditionally skipped
+- **`ignore!(("tag") { … })`** — code hidden from display, always executed
+- **Tag filter** — `--include` / `--exclude` on the command line
+- **Typewriter mode** — characters appear one-by-one; press Enter to fast-forward
 - **Syntax highlighting** — powered by [syntect](https://crates.io/crates/syntect), output to stderr
 
 ## Filtering
@@ -129,9 +134,37 @@ cargo run
 | `skip!` | Code shown, **not** executed     | Code executed       |
 | `ignore!` | Code executed, **hidden**      | Code executed       |
 
+## Typewriter mode
+
+Enable typewriter display so code appears character-by-character:
+
+```rust
+fn main() {
+    code_steps::display::set_typewriter(true);         // enable
+    code_steps::display::set_typewriter_speed(8);      // ms per char (default 15)
+    code_steps::display::set_typewriter_line_pause(60); // ms after newline (default 150)
+
+    step!("Demo", { /* types out character by character */ });
+}
+```
+
+Press **Enter** during typing to fast-forward the current line.  The next
+line continues at normal speed.  On the last line, Enter jumps straight to
+the waiting prompt.
+
+Configure defaults in `Cargo.toml`:
+
+```toml
+[package.metadata.code-steps]
+typewriter = true
+typewriter-speed = 5
+typewriter-line-pause = 60
+```
+
 ## Nested steps
 
-`step!` can be nested — each inner step shows its path in the auto-pause:
+`step!` can be nested — inner steps are visually indented and the auto-pause
+shows the full path:
 
 ```rust
 step!("Compile", {
@@ -146,21 +179,27 @@ step!("Compile", {
 Terminal output:
 
 ```
+==========================================
 [Compile]
-   …
-   ok
+   let source = …;
+   // Tokenise
+   // Parse
+   // Type-check
    Compile waiting
 
+   ===========================================
    [Tokenise]
-      …
-      ok
-      Compile : Tokenise waiting       ← path shows nesting
+      let tokens = …;
+      Compile : Tokenise waiting
 
+   ===========================================
    [Type-check]
-      [Check main]
-         …
-         ok
-         Compile : Type-check : Check main waiting   ← three levels deep
+      // Check main signature
+
+      ===========================================
+      [Check main signature]
+         println!(…);
+         Compile : Type-check : Check main signature waiting
 ```
 
 See `examples/nested.rs` for a full demo.
@@ -193,8 +232,8 @@ Any syntect theme key works.  Commonly used ones:
 
 | Macro                        | Shows | Executes | Pauses |
 |------------------------------|-------|----------|--------|
-| `step!("desc", { … })`       | yes   | yes      | auto    |
-| `step!("desc", "tag", { … })`| yes   | cond.    | auto    |
+| `step!("desc", { … })`       | yes   | yes      | auto   |
+| `step!("desc", "tag", { … })`| yes   | cond.    | auto   |
 | `wait!()`                    | yes   | —        | yes    |
 | `wait!("t1", "t2")`          | yes   | —        | cond.  |
 | `skip!(("t1") { … })`        | yes   | cond. neg| no     |
@@ -206,10 +245,13 @@ Any syntect theme key works.  Commonly used ones:
 |----------|---------|
 | `init_wait_filter()` | Parse CLI args, install global filter |
 | `print_file_header(path)` | Bold header with surrounding blank lines |
+| `print_step_separator()` | Cyan `=====` separator the width of the terminal |
 | `print_step_header(comment)` | Cyan `[comment]` line |
-| `print_code(code)` | Syntax-highlighted code |
-| `print_step_done()` | Green `ok` |
-| `press_any_key_if(tags)` | Yellow prompt + wait for Enter (if filter allows) |
+| `print_code(code)` | Syntax-highlighted code (typewriter if enabled) |
+| `set_typewriter(on)` | Enable / disable typewriter display |
+| `set_typewriter_speed(ms)` | Character delay in ms |
+| `set_typewriter_line_pause(ms)` | Line-end pause in ms |
+| `press_any_key_if(tags)` | Path prompt + wait for Enter |
 | `filter_matches(tags)` | Query whether tags pass the current filter |
 
 ## License

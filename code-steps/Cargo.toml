@@ -11,10 +11,13 @@ readme = "README.md"
 
 [package.metadata.code-steps]
 theme = "ayu-dark"
+typewriter = true
+typewriter-speed = 50
+typewriter-line-pause = 60
 
 [dependencies]
 syntect = { version = "5", default-features = false, features = ["default-fancy"] }
-code-steps-macros = { path = "../code-steps-macros", version = "0.2" }
+code-steps-macros = { path = "../code-steps-macros", version = "0.3" }
 
 [build-dependencies]
 toml = "0.8"

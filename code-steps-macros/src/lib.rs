@@ -36,7 +36,7 @@
 //! **Phase 1 — compile-time source processing** ([`source`]):
 //!
 //! ```text
-//! raw source  →  dedent  →  strip_comments  →  strip_ignores  →  display string
+//! raw source  →  dedent  →  strip_comments  →  strip_ignores  →  strip_nested_steps  →  display string
 //! ```
 //!
 //! The display string is baked into the binary.  No runtime cost for
@@ -47,10 +47,10 @@
 //! ```rust,ignore
 //! {
 //!     let __step_guard = enter_step(comment);
+//!     print_step_separator();
 //!     print_step_header(comment);
-//!     print_code(display_str);      // from Phase 1
+//!     print_code(display_str);      // from Phase 1, typewriter if enabled
 //!     let __result = { user code };  // the parsed AST, unmodified
-//!     print_step_done();
 //!     press_any_key_if(&[]);         // auto-pause, shows path if nested
 //!     __result
 //!     // __step_guard drops here → pops path

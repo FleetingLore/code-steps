@@ -67,6 +67,7 @@ fn highlighting() -> &'static (SyntaxSet, ThemeSet) {
 
 /// Print each line of `code` with 3-space indent and 24-bit terminal escapes.
 fn print_highlighted(code: &str) {
+    let indent = step_indent();
     let (ss, ts) = highlighting();
     let syntax = ss.find_syntax_by_name("Rust").expect("Rust syntax");
     let theme = &ts.themes[THEME];
@@ -74,7 +75,7 @@ fn print_highlighted(code: &str) {
 
     for line in LinesWithEndings::from(code) {
         let ranges = h.highlight_line(line, ss).unwrap();
-        let _ = write!(io::stderr(), "   ");
+        let _ = write!(io::stderr(), "{indent}   ");
         for (style, text) in ranges {
             let _ = write!(
                 io::stderr(),
@@ -88,11 +89,11 @@ fn print_highlighted(code: &str) {
 // ── Step display API ──────────────────────────────────────────────────────
 //
 // Called by the `step!` macro expansion.  Print order:
-//   1. print_step_header  — cyan "[comment]" line
-//   2. print_code         — syntax-highlighted body
-//   3. (user code runs, possibly with wait!/skip!/ignore!)
-//   4. print_step_done    — green "   ok" line
-//   5. press_any_key_if   — auto-pause until Enter
+//   1. print_step_separator — cyan "====…" line (terminal width)
+//   2. print_step_header   — cyan "[comment]" line
+//   3. print_code          — syntax-highlighted body (typewriter if enabled)
+//   4. (user code runs, possibly with wait!/skip!/ignore!)
+//   5. press_any_key_if    — auto-pause, shows path + "waiting"
 
 // ── Step nesting path ────────────────────────────────────────────────────
 //
@@ -132,13 +133,273 @@ pub fn print_file_header(filename: &str) {
 
 /// Cyan `[comment]` line introducing the next step.
 pub fn print_step_header(comment: &str) {
-    let _ = writeln!(io::stderr(), "\x1b[36m[{}]\x1b[0m", comment);
+    let indent = step_indent();
+    let _ = writeln!(io::stderr(), "{indent}\x1b[36m[{}]\x1b[0m", comment);
+}
+
+/// Terminal-width separator line of `=` above each step header.
+pub fn print_step_separator() {
+    let indent = step_indent();
+    let width = term_width().unwrap_or(80).saturating_sub(indent.len());
+    let _ = writeln!(io::stderr(), "{indent}\x1b[36m{}\x1b[0m", "=".repeat(width));
+}
+
+fn term_width() -> Option<usize> {
+    std::env::var("COLUMNS").ok().and_then(|s| s.parse().ok())
+}
+
+fn step_indent() -> String {
+    let depth = STEP_PATH.with(|p| p.borrow().len());
+    "   ".repeat(depth.saturating_sub(1))
 }
 
 /// Print the dedented, comment-stripped, ignore-stripped source of the step
 /// block with syntax highlighting.
+///
+/// When typewriter mode is enabled (see [`set_typewriter`]), characters
+/// appear one-by-one with a configurable delay.
 pub fn print_code(code: &str) {
-    print_highlighted(code);
+    init_typewriter_defaults();
+    if TYPEWRITER.load(Ordering::Relaxed) {
+        print_code_typewriter(code);
+    } else {
+        print_highlighted(code);
+    }
+}
+
+// ── Typewriter mode ──────────────────────────────────────────────────────
+
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+
+static TYPEWRITER: AtomicBool = AtomicBool::new(false);
+static TYPEWRITER_SPEED: AtomicU64 = AtomicU64::new(15);
+static TYPEWRITER_LINE_PAUSE: AtomicU64 = AtomicU64::new(150);
+
+fn init_typewriter_defaults() {
+    use std::sync::OnceLock;
+    static INIT: OnceLock<()> = OnceLock::new();
+    INIT.get_or_init(|| {
+        if option_env!("CODE_STEPS_TYPEWRITER").map_or(false, |v| v == "true") {
+            TYPEWRITER.store(true, Ordering::Relaxed);
+        }
+        if let Some(n) = option_env!("CODE_STEPS_TYPEWRITER_SPEED").and_then(|v| v.parse().ok()) {
+            TYPEWRITER_SPEED.store(n, Ordering::Relaxed);
+        }
+        if let Some(n) =
+            option_env!("CODE_STEPS_TYPEWRITER_LINE_PAUSE").and_then(|v| v.parse().ok())
+        {
+            TYPEWRITER_LINE_PAUSE.store(n, Ordering::Relaxed);
+        }
+    });
+}
+
+/// Enable or disable typewriter display for all subsequent `step!` calls.
+pub fn set_typewriter(on: bool) {
+    TYPEWRITER.store(on, Ordering::Relaxed);
+}
+
+/// Set the typewriter character delay in milliseconds (default 15).
+pub fn set_typewriter_speed(ms: u64) {
+    TYPEWRITER_SPEED.store(ms, Ordering::Relaxed);
+}
+
+/// Set the typewriter line-end pause in milliseconds (default 150).
+pub fn set_typewriter_line_pause(ms: u64) {
+    TYPEWRITER_LINE_PAUSE.store(ms, Ordering::Relaxed);
+}
+
+fn print_code_typewriter(code: &str) {
+    use std::io::Write;
+
+    #[cfg(unix)]
+    let _raw_guard = RawModeGuard::enter();
+
+    let indent = step_indent();
+    let (ss, ts) = highlighting();
+    let syntax = ss.find_syntax_by_name("Rust").expect("Rust syntax");
+    let theme = &ts.themes[THEME];
+    let mut h = HighlightLines::new(syntax, theme);
+    let speed = std::time::Duration::from_millis(TYPEWRITER_SPEED.load(Ordering::Relaxed));
+    let line_pause =
+        std::time::Duration::from_millis(TYPEWRITER_LINE_PAUSE.load(Ordering::Relaxed));
+
+    for line in LinesWithEndings::from(code) {
+        let _ = write!(io::stderr(), "{indent}   ");
+        let _ = io::stderr().flush();
+        let ranges = h.highlight_line(line, ss).unwrap();
+        let mut fast_forward = false;
+        let mut ri = 0;
+        while ri < ranges.len() && !fast_forward {
+            let (style_ref, text) = &ranges[ri];
+            let style = *style_ref;
+            let mut pos = 0;
+            for ch in text.chars() {
+                if try_read_enter() {
+                    fast_forward = true;
+                    break;
+                }
+                let ch_str = ch.to_string();
+                let _ = write!(
+                    io::stderr(),
+                    "{}",
+                    syntect::util::as_24_bit_terminal_escaped(&[(style, &ch_str)], false)
+                );
+                let _ = io::stderr().flush();
+                std::thread::sleep(speed);
+                pos += ch.len_utf8();
+            }
+            if fast_forward {
+                let _ = write!(
+                    io::stderr(),
+                    "{}",
+                    syntect::util::as_24_bit_terminal_escaped(&[(style, &text[pos..])], false)
+                );
+            }
+            ri += 1;
+        }
+        if fast_forward {
+            while ri < ranges.len() {
+                let (style_ref, text) = &ranges[ri];
+                let style = *style_ref;
+                let _ = write!(
+                    io::stderr(),
+                    "{}",
+                    syntect::util::as_24_bit_terminal_escaped(&[(style, text)], false)
+                );
+                ri += 1;
+            }
+            let _ = io::stderr().flush();
+        }
+        // Line pause — also check for Enter to skip
+        if !fast_forward {
+            sleep_or_skip(line_pause);
+        }
+    }
+}
+
+/// Non-blocking check: returns `true` if the user pressed Enter.
+/// stdin must first be set to non-blocking via `setup_nonblocking_stdin`.
+fn try_read_enter() -> bool {
+    setup_nonblocking_stdin();
+    let mut buf = [0u8; 32];
+    loop {
+        let n = unsafe { raw::read(0, buf.as_mut_ptr(), buf.len()) };
+        if n <= 0 {
+            return false;
+        }
+        if buf[..n as usize].contains(&b'\n') {
+            return true;
+        }
+    }
+}
+
+/// Sleep for `dur`, but return early if Enter is pressed.
+fn sleep_or_skip(dur: std::time::Duration) {
+    let step = std::time::Duration::from_millis(10);
+    let start = std::time::Instant::now();
+    while start.elapsed() < dur {
+        if try_read_enter() {
+            return;
+        }
+        std::thread::sleep(step.min(dur.saturating_sub(start.elapsed())));
+    }
+}
+
+// ── Non-blocking stdin (Unix) ───────────────────────────────────────────
+
+#[cfg(unix)]
+mod raw {
+    use std::os::raw::c_int;
+    unsafe extern "C" {
+        pub fn fcntl(fd: c_int, cmd: c_int, ...) -> c_int;
+        pub fn read(fd: c_int, buf: *mut u8, count: usize) -> isize;
+        pub fn tcgetattr(fd: c_int, termios: *mut Termios) -> c_int;
+        pub fn tcsetattr(fd: c_int, action: c_int, termios: *const Termios) -> c_int;
+    }
+    pub const F_GETFL: c_int = 3;
+    pub const F_SETFL: c_int = 4;
+    #[cfg(target_os = "macos")]
+    pub const O_NONBLOCK: c_int = 0x0004;
+    #[cfg(not(target_os = "macos"))]
+    pub const O_NONBLOCK: c_int = 0x0800;
+    pub const TCSANOW: c_int = 0;
+
+    #[repr(C)]
+    #[derive(Clone)]
+    pub struct Termios {
+        pub c_iflag: u64,
+        pub c_oflag: u64,
+        pub c_cflag: u64,
+        pub c_lflag: u64,
+        pub c_cc: [u8; 20],
+        pub c_ispeed: u64,
+        pub c_ospeed: u64,
+    }
+}
+
+#[cfg(not(unix))]
+mod raw {
+    pub unsafe fn read(_fd: i32, _buf: *mut u8, _count: usize) -> isize {
+        0
+    }
+}
+
+static STDIN_NONBLOCK: OnceLock<()> = OnceLock::new();
+
+fn setup_nonblocking_stdin() {
+    STDIN_NONBLOCK.get_or_init(|| {
+        #[cfg(unix)]
+        unsafe {
+            let flags = raw::fcntl(0, raw::F_GETFL, 0);
+            raw::fcntl(0, raw::F_SETFL, flags | raw::O_NONBLOCK);
+        }
+    });
+}
+
+#[cfg(unix)]
+fn enter_raw_mode() -> Option<raw::Termios> {
+    use std::mem::MaybeUninit;
+    unsafe {
+        let mut orig: MaybeUninit<raw::Termios> = MaybeUninit::zeroed();
+        if raw::tcgetattr(0, orig.as_mut_ptr()) != 0 {
+            return None;
+        }
+        let orig = orig.assume_init();
+        let mut raw = orig.clone();
+        // Disable canonical mode, echo, and signal chars
+        raw.c_lflag &= !(0x0000_0002 | 0x0000_0008 | 0x0000_0001); // ICANON | ECHO | ISIG
+        // Read 1 byte at a time, no timeout
+        raw.c_cc[6] = 1; // VMIN = 1
+        raw.c_cc[5] = 0; // VTIME = 0
+        raw::tcsetattr(0, raw::TCSANOW, &raw);
+        Some(orig)
+    }
+}
+
+#[cfg(unix)]
+fn leave_raw_mode(orig: raw::Termios) {
+    unsafe {
+        raw::tcsetattr(0, raw::TCSANOW, &orig);
+    }
+}
+
+#[cfg(unix)]
+struct RawModeGuard {
+    orig: raw::Termios,
+}
+
+#[cfg(unix)]
+impl RawModeGuard {
+    fn enter() -> Option<Self> {
+        enter_raw_mode().map(|orig| RawModeGuard { orig })
+    }
+}
+
+#[cfg(unix)]
+impl Drop for RawModeGuard {
+    fn drop(&mut self) {
+        leave_raw_mode(self.orig.clone());
+    }
 }
 
 /// Green `   ok` marker after the step body has finished executing.
@@ -210,18 +471,39 @@ pub fn init_wait_filter() {
 }
 
 /// Called by the `wait!()` macro expansion and `step!`'s auto-pause.
-/// Prints the current nesting path in yellow and waits for Enter if the
-/// filter allows.
+/// Prints the current nesting path and waits for Enter if the filter
+/// allows.  The last segment is highlighted in green (like `ok`); the
+/// parent segments are yellow.
 pub fn press_any_key_if(tags: &[&str]) {
     if let Some(filter) = FILTER.get() {
         if !filter.matches(tags) {
             return;
         }
     }
-    let path = STEP_PATH.with(|p| p.borrow().join(" : "));
-    let _ = writeln!(io::stderr(), "\x1b[33m    {path} waiting\x1b[0m");
-    let mut buf = String::new();
-    let _ = io::stdin().read_line(&mut buf);
+    let segments: Vec<String> = STEP_PATH.with(|p| p.borrow().clone());
+    let indent = step_indent();
+    if let Some((last, parents)) = segments.split_last() {
+        if parents.is_empty() {
+            let _ = writeln!(io::stderr(), "{indent}\x1b[32m    {last} waiting\x1b[0m");
+        } else {
+            let _ = write!(io::stderr(), "{indent}\x1b[33m    {}", parents.join(" : "));
+            let _ = write!(io::stderr(), " : ");
+            let _ = writeln!(io::stderr(), "\x1b[32m{last} waiting\x1b[0m");
+        }
+    } else {
+        let _ = writeln!(io::stderr(), "{indent}\x1b[33m    ...\x1b[0m");
+    }
+    // Non-blocking wait for Enter (stdin may be in non-blocking mode
+    // after typewriter display).
+    setup_nonblocking_stdin();
+    let mut byte = [0u8; 1];
+    loop {
+        let n = unsafe { raw::read(0, byte.as_mut_ptr(), 1) };
+        if n == 1 && byte[0] == b'\n' {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    }
 }
 
 /// Called by `skip!()` / `step!("…", "tag", …)`.  Returns `true` when the

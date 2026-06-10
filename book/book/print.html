@@ -36,7 +36,7 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-c57fbc93.js";
+            window.path_to_searchindex_js = "searchindex-2cd6e326.js";
         </script>
         <!-- Start loading toc.js asap -->
         <script src="toc-d45b120a.js"></script>
@@ -203,16 +203,13 @@ fn main() {
 [Hello, code-steps!]
    println!("This is my first step.");
 This is my first step.
-   ok
-
    Hello, code-steps! waiting
 </code></pre>
-<p>Every <code>step!</code> block does four things:</p>
+<p>Every <code>step!</code> block does three things:</p>
 <ol>
-<li>Prints a cyan <code>[description]</code> header.</li>
-<li>Prints the source code with <strong>syntax highlighting</strong>.</li>
-<li>Executes the code.</li>
-<li>Prints a green <code>ok</code> and <strong>auto-pauses</strong> — press Enter to continue.</li>
+<li>Prints a cyan <code>=====</code> separator and a <code>[description]</code> header.</li>
+<li>Prints the source code with <strong>syntax highlighting</strong> (typewriter-style if enabled).</li>
+<li>Executes the code and <strong>auto-pauses</strong> — press Enter to continue.</li>
 </ol>
 <p>All display output goes to <strong>stderr</strong>, so your <code>println!</code> output (stdout) stays
 clean.</p>
@@ -798,12 +795,11 @@ $ cargo run --example filter -- --exclude verbose
 <div style="break-before: page; page-break-before: always;"></div>
 <h1 id="the-step-macro"><a class="header" href="#the-step-macro">The <code>step!</code> Macro</a></h1>
 <p><code>step!</code> is the <strong>primary macro</strong> — everything else is used inside it.</p>
-<p>Every <code>step!</code> does four things:</p>
+<p>Every <code>step!</code> does three things:</p>
 <ol>
-<li>Prints a cyan <code>[description]</code> header.</li>
-<li>Prints the source code with syntax highlighting.</li>
-<li>Executes the code block.</li>
-<li>Prints a green <code>ok</code> and auto-pauses.</li>
+<li>Prints a cyan <code>=====</code> separator and a <code>[description]</code> header.</li>
+<li>Prints the source code with syntax highlighting (typewriter-style if enabled).</li>
+<li>Executes the code block and auto-pauses.</li>
 </ol>
 <p>The next three sections cover <code>step!</code> in detail:</p>
 <ul>
@@ -912,13 +908,12 @@ fn main() {
 <p><code>step!</code> automatically pauses at the end of every step.  No need to
 manually insert <code>wait!()</code> at step boundaries.</p>
 <h2 id="how-it-looks"><a class="header" href="#how-it-looks">How it looks</a></h2>
-<pre><code class="language-text">[Load data]
+<pre><code class="language-text">==========================================
+[Load data]
    let data = vec![1, 2, 3];
    println!("{data:?}");
 [1, 2, 3]
-   ok
-
-   Load data waiting        ← yellow prompt, press Enter to continue
+   Load data waiting        ← green prompt, press Enter to continue
 </code></pre>
 <p>The pause prompt shows the step name.  For nested steps, it shows the full
 path (see <a href="../ch05_02_nesting.html">5.2 — Nested Steps</a>).</p>
@@ -1186,23 +1181,25 @@ The auto-pause shows the full nesting path so you always know where you are.</p>
 });</code></pre>
 <h2 id="path-display"><a class="header" href="#path-display">Path display</a></h2>
 <p>When nested, the yellow pause prompt shows the full path:</p>
-<pre><code class="language-text">[Compile]
-   ok
+<pre><code class="language-text">==========================================
+[Compile]
    Compile waiting                    ← depth 1
 
+   ===========================================
    [Tokenise]
-      ok
       Compile : Tokenise waiting      ← depth 2: "Outer : Inner"
 
+   ===========================================
    [Parse]
-      ok
       Compile : Parse waiting
 </code></pre>
 <h2 id="three-level-nesting"><a class="header" href="#three-level-nesting">Three-level nesting</a></h2>
-<pre><code class="language-text">[Compile]
+<pre><code class="language-text">==========================================
+[Compile]
+   ===========================================
    [Type-check]
+      ===========================================
       [Check main]
-         ok
          Compile : Type-check : Check main waiting   ← depth 3
 </code></pre>
 <h2 id="how-it-works-3"><a class="header" href="#how-it-works-3">How it works</a></h2>
