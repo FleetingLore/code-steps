@@ -1,4 +1,4 @@
-# 5.1 — Theme Switching
+# Theme Switching
 
 code-steps uses [syntect] for syntax highlighting.  You can change the
 colour theme by setting a single value in your `Cargo.toml`.

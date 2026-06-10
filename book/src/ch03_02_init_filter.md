@@ -1,4 +1,4 @@
-# 3.2 — `init_wait_filter` & The CLI
+# `init_wait_filter` & The CLI
 
 `init_wait_filter()` reads `--include` and `--exclude` from
 [`std::env::args`] and installs a **global filter** that all macros

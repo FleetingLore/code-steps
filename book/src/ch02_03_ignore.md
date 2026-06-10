@@ -1,4 +1,4 @@
-# 2.3 — `ignore!`: Execute Without Showing
+# `ignore!`: Execute Without Showing
 
 `ignore!` is the complement of [`skip!`](../ch02_02_skip.md): code **always
 executes** at runtime but is **hidden** from the terminal display.

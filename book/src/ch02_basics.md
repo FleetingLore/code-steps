@@ -1,4 +1,4 @@
-# Chapter 2: The Three Basic Macros
+# The Three Basic Macros
 
 Before diving into the main `step!` macro, let's understand the three
 supporting macros.  They are always used **inside** a `step!` block and

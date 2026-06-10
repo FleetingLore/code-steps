@@ -1,4 +1,4 @@
-# 5.2 — Nested Steps
+# Nested Steps
 
 `step!` can be nested — an inner `step!` inside an outer `step!`'s block.
 The auto-pause shows the full nesting path so you always know where you are.

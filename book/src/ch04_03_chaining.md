@@ -1,4 +1,4 @@
-# 4.3 — Return Values & Chaining
+# Return Values & Chaining
 
 `step!` preserves the return value of its block, so you can **chain** steps
 together — the output of one step feeds into the next.

@@ -36,10 +36,10 @@
             const path_to_root = "";
             const default_light_theme = "light";
             const default_dark_theme = "navy";
-            window.path_to_searchindex_js = "searchindex-836211f3.js";
+            window.path_to_searchindex_js = "searchindex-c57fbc93.js";
         </script>
         <!-- Start loading toc.js asap -->
-        <script src="toc-625810ae.js"></script>
+        <script src="toc-d45b120a.js"></script>
     </head>
     <body>
     <div id="mdbook-help-container">
@@ -175,7 +175,7 @@
 
                 <div id="mdbook-content" class="content">
                     <main>
-                        <h1 id="chapter-1-environment-setup"><a class="header" href="#chapter-1-environment-setup">Chapter 1: Environment Setup</a></h1>
+                        <h1 id="environment-setup"><a class="header" href="#environment-setup">Environment Setup</a></h1>
 <h2 id="what-is-code-steps"><a class="header" href="#what-is-code-steps">What is code-steps?</a></h2>
 <p><code>code-steps</code> is a Rust crate that turns your terminal into a <strong>notebook-style
 presentation tool</strong>.  It shows syntax-highlighted code step by step, pauses
@@ -225,7 +225,7 @@ clean.</p>
 </code></pre>
 <p>That’s it — you’re ready to start using code-steps.</p>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="chapter-2-the-three-basic-macros"><a class="header" href="#chapter-2-the-three-basic-macros">Chapter 2: The Three Basic Macros</a></h1>
+<h1 id="the-three-basic-macros"><a class="header" href="#the-three-basic-macros">The Three Basic Macros</a></h1>
 <p>Before diving into the main <code>step!</code> macro, let’s understand the three
 supporting macros.  They are always used <strong>inside</strong> a <code>step!</code> block and
 give you fine-grained control over visibility and interactivity.</p>
@@ -249,7 +249,7 @@ give you fine-grained control over visibility and interactivity.</p>
 </ul>
 <p>The next three sections explore each macro in detail with runnable examples.</p>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="21--wait-interactive-pauses"><a class="header" href="#21--wait-interactive-pauses">2.1 — <code>wait!</code>: Interactive Pauses</a></h1>
+<h1 id="wait-interactive-pauses"><a class="header" href="#wait-interactive-pauses"><code>wait!</code>: Interactive Pauses</a></h1>
 <p><code>wait!</code> pauses execution and waits for the user to press Enter.  It prints a
 yellow prompt showing the current step path.</p>
 <h2 id="two-forms"><a class="header" href="#two-forms">Two forms</a></h2>
@@ -326,7 +326,7 @@ fn main() {
 <pre><code class="language-text">$ cargo run --example wait
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="22--skip-show-without-executing"><a class="header" href="#22--skip-show-without-executing">2.2 — <code>skip!</code>: Show Without Executing</a></h1>
+<h1 id="skip-show-without-executing"><a class="header" href="#skip-show-without-executing"><code>skip!</code>: Show Without Executing</a></h1>
 <p><code>skip!</code> displays code in the terminal but <strong>conditionally skips</strong> its
 execution at runtime.</p>
 <h2 id="syntax"><a class="header" href="#syntax">Syntax</a></h2>
@@ -476,7 +476,7 @@ $ cargo run --example skip -- --include debug-borrow
 $ cargo run --example skip -- --include debug-unsafe
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="23--ignore-execute-without-showing"><a class="header" href="#23--ignore-execute-without-showing">2.3 — <code>ignore!</code>: Execute Without Showing</a></h1>
+<h1 id="ignore-execute-without-showing"><a class="header" href="#ignore-execute-without-showing"><code>ignore!</code>: Execute Without Showing</a></h1>
 <p><code>ignore!</code> is the complement of <a href="../ch02_02_skip.html"><code>skip!</code></a>: code <strong>always
 executes</strong> at runtime but is <strong>hidden</strong> from the terminal display.</p>
 <h2 id="syntax-1"><a class="header" href="#syntax-1">Syntax</a></h2>
@@ -592,19 +592,18 @@ fn build_fake_index() -&gt; usize {
 <pre><code class="language-text">$ cargo run --example ignore
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="chapter-3-the-tag-system"><a class="header" href="#chapter-3-the-tag-system">Chapter 3: The Tag System</a></h1>
+<h1 id="the-tag-system"><a class="header" href="#the-tag-system">The Tag System</a></h1>
 <p>Tags are the bridge between your source code and the command line.  They let
 you write <strong>one program</strong> that can be run in <strong>many different ways</strong> just by
 changing CLI arguments — no code changes needed.</p>
 <p>The next three sections cover:</p>
 <ul>
-<li><strong>3.1</strong> — What tags are and where you attach them.</li>
-<li><strong>3.2</strong> — How <code>init_wait_filter</code> parses <code>--include</code> / <code>--exclude</code> from
-the command line.</li>
-<li><strong>3.3</strong> — The exact filter rules and how each macro responds.</li>
+<li><strong>Tags</strong> — what they are and where you attach them.</li>
+<li><strong><code>init_wait_filter</code></strong> — how it parses <code>--include</code> / <code>--exclude</code> from the command line.</li>
+<li><strong>Filter rules</strong> — the exact logic and how each macro responds.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="31--what-are-tags"><a class="header" href="#31--what-are-tags">3.1 — What Are Tags?</a></h1>
+<h1 id="what-are-tags"><a class="header" href="#what-are-tags">What Are Tags?</a></h1>
 <p>A <strong>tag</strong> is a string label attached to a macro invocation.  All four macros
 support tags: <code>step!</code>, <code>wait!</code>, <code>skip!</code>, and <code>ignore!</code>.</p>
 <h2 id="where-tags-go"><a class="header" href="#where-tags-go">Where tags go</a></h2>
@@ -620,7 +619,7 @@ ignore!(("tag1", "tag2") { … });</code></pre>
 <h2 id="what-tags-do"><a class="header" href="#what-tags-do">What tags do</a></h2>
 <p>Tags control whether a macro invocation is <strong>active</strong> or <strong>blocked</strong> at
 runtime.  The decision is made by a global filter (see
-<a href="#32--init_wait_filter--the-cli">3.2</a>) that reads command-line arguments.</p>
+<a href="#init_wait_filter--the-cli">3.2</a>) that reads command-line arguments.</p>
 <div class="table-wrapper">
 <table>
 <thead>
@@ -649,7 +648,7 @@ use case.  Common patterns:</p>
 </table>
 </div>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="32--init_wait_filter--the-cli"><a class="header" href="#32--init_wait_filter--the-cli">3.2 — <code>init_wait_filter</code> &amp; The CLI</a></h1>
+<h1 id="init_wait_filter--the-cli"><a class="header" href="#init_wait_filter--the-cli"><code>init_wait_filter</code> &amp; The CLI</a></h1>
 <p><code>init_wait_filter()</code> reads <code>--include</code> and <code>--exclude</code> from
 <a href="https://doc.rust-lang.org/std/env/fn.args.html"><code>std::env::args</code></a> and installs a <strong>global filter</strong> that all macros
 consult at runtime.</p>
@@ -683,7 +682,7 @@ after <code>--include</code> (or <code>--exclude</code>) is split on commas, tri
                     include = ["basic", "advanced"]   exclude = ["debug"]
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="33--filter-rules--macro-behaviour"><a class="header" href="#33--filter-rules--macro-behaviour">3.3 — Filter Rules &amp; Macro Behaviour</a></h1>
+<h1 id="filter-rules--macro-behaviour"><a class="header" href="#filter-rules--macro-behaviour">Filter Rules &amp; Macro Behaviour</a></h1>
 <p>The filter evaluates each macro invocation’s tags against the global
 include/exclude lists.  The logic has two stages:</p>
 <h2 id="stage-1--include-check"><a class="header" href="#stage-1--include-check">Stage 1 — Include check</a></h2>
@@ -797,7 +796,7 @@ $ cargo run --example filter -- --include advanced --exclude debug
 $ cargo run --example filter -- --exclude verbose
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="chapter-4-the-step-macro"><a class="header" href="#chapter-4-the-step-macro">Chapter 4: The <code>step!</code> Macro</a></h1>
+<h1 id="the-step-macro"><a class="header" href="#the-step-macro">The <code>step!</code> Macro</a></h1>
 <p><code>step!</code> is the <strong>primary macro</strong> — everything else is used inside it.</p>
 <p>Every <code>step!</code> does four things:</p>
 <ol>
@@ -808,12 +807,12 @@ $ cargo run --example filter -- --exclude verbose
 </ol>
 <p>The next three sections cover <code>step!</code> in detail:</p>
 <ul>
-<li><strong>4.1</strong> — Two forms: with and without tags.</li>
-<li><strong>4.2</strong> — Auto-pause and how the path is displayed.</li>
-<li><strong>4.3</strong> — Return values and chaining steps together.</li>
+<li><strong>Two forms</strong> — with and without tags.</li>
+<li><strong>Auto-pause</strong> — how steps pause automatically and show the path.</li>
+<li><strong>Return values</strong> — chaining steps together.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="41--two-forms-of-step"><a class="header" href="#41--two-forms-of-step">4.1 — Two Forms of <code>step!</code></a></h1>
+<h1 id="two-forms-of-step"><a class="header" href="#two-forms-of-step">Two Forms of <code>step!</code></a></h1>
 <p><code>step!</code> has two forms, distinguished by the presence of tags:</p>
 <h2 id="form-1--no-tags-always-runs"><a class="header" href="#form-1--no-tags-always-runs">Form 1 — No tags (always runs)</a></h2>
 <pre><code class="language-rust">step!("Description", {
@@ -909,7 +908,7 @@ fn main() {
 <pre><code class="language-text">$ cargo run --example step
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="42--auto-pause--path-display"><a class="header" href="#42--auto-pause--path-display">4.2 — Auto-Pause &amp; Path Display</a></h1>
+<h1 id="auto-pause--path-display"><a class="header" href="#auto-pause--path-display">Auto-Pause &amp; Path Display</a></h1>
 <p><code>step!</code> automatically pauses at the end of every step.  No need to
 manually insert <code>wait!()</code> at step boundaries.</p>
 <h2 id="how-it-looks"><a class="header" href="#how-it-looks">How it looks</a></h2>
@@ -944,7 +943,7 @@ This was repetitive and error-prone.  Auto-pause makes <code>step!</code> self-c
 each step naturally stops so you can explain it.  Use <code>wait!()</code> only when
 you need mid-step pauses or conditional checkpoints.</p>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="43--return-values--chaining"><a class="header" href="#43--return-values--chaining">4.3 — Return Values &amp; Chaining</a></h1>
+<h1 id="return-values--chaining"><a class="header" href="#return-values--chaining">Return Values &amp; Chaining</a></h1>
 <p><code>step!</code> preserves the return value of its block, so you can <strong>chain</strong> steps
 together — the output of one step feeds into the next.</p>
 <h2 id="basic-chaining"><a class="header" href="#basic-chaining">Basic chaining</a></h2>
@@ -1123,15 +1122,15 @@ fn main() {
 $ cargo run --example comprehensive -- --include basic
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="chapter-5-advanced-usage"><a class="header" href="#chapter-5-advanced-usage">Chapter 5: Advanced Usage</a></h1>
+<h1 id="advanced-usage"><a class="header" href="#advanced-usage">Advanced Usage</a></h1>
 <p>This chapter covers two features that let you customise code-steps for
 different contexts:</p>
 <ul>
-<li><strong>5.1 — Theme Switching</strong>: change the syntax highlighting theme.</li>
-<li><strong>5.2 — Nested Steps</strong>: organise complex demos hierarchically.</li>
+<li><strong>Theme Switching</strong> — change the syntax highlighting theme.</li>
+<li><strong>Nested Steps</strong> — organise complex demos hierarchically.</li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="51--theme-switching"><a class="header" href="#51--theme-switching">5.1 — Theme Switching</a></h1>
+<h1 id="theme-switching"><a class="header" href="#theme-switching">Theme Switching</a></h1>
 <p>code-steps uses <a href="https://crates.io/crates/syntect">syntect</a> for syntax highlighting.  You can change the
 colour theme by setting a single value in your <code>Cargo.toml</code>.</p>
 <h2 id="picking-a-theme"><a class="header" href="#picking-a-theme">Picking a theme</a></h2>
@@ -1173,7 +1172,7 @@ reads the value and passes it to the highlighting engine.</p>
 dropped it.  All other themes come from syntect’s built-in set.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div>
-<h1 id="52--nested-steps"><a class="header" href="#52--nested-steps">5.2 — Nested Steps</a></h1>
+<h1 id="nested-steps"><a class="header" href="#nested-steps">Nested Steps</a></h1>
 <p><code>step!</code> can be nested — an inner <code>step!</code> inside an outer <code>step!</code>’s block.
 The auto-pause shows the full nesting path so you always know where you are.</p>
 <h2 id="basic-nesting"><a class="header" href="#basic-nesting">Basic nesting</a></h2>

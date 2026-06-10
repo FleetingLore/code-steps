@@ -1,4 +1,4 @@
-# Chapter 1: Environment Setup
+# Environment Setup
 
 ## What is code-steps?
 

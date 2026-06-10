@@ -1,4 +1,4 @@
-# 3.1 — What Are Tags?
+# What Are Tags?
 
 A **tag** is a string label attached to a macro invocation.  All four macros
 support tags: `step!`, `wait!`, `skip!`, and `ignore!`.

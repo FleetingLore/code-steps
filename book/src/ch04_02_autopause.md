@@ -1,4 +1,4 @@
-# 4.2 — Auto-Pause & Path Display
+# Auto-Pause & Path Display
 
 `step!` automatically pauses at the end of every step.  No need to
 manually insert `wait!()` at step boundaries.

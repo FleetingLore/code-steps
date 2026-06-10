@@ -1,4 +1,4 @@
-# 2.2 — `skip!`: Show Without Executing
+# `skip!`: Show Without Executing
 
 `skip!` displays code in the terminal but **conditionally skips** its
 execution at runtime.

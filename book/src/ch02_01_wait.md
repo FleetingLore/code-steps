@@ -1,4 +1,4 @@
-# 2.1 — `wait!`: Interactive Pauses
+# `wait!`: Interactive Pauses
 
 `wait!` pauses execution and waits for the user to press Enter.  It prints a
 yellow prompt showing the current step path.

@@ -1,4 +1,4 @@
-# 3.3 — Filter Rules & Macro Behaviour
+# Filter Rules & Macro Behaviour
 
 The filter evaluates each macro invocation's tags against the global
 include/exclude lists.  The logic has two stages:

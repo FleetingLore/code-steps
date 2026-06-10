@@ -1,4 +1,4 @@
-# 4.1 — Two Forms of `step!`
+# Two Forms of `step!`
 
 `step!` has two forms, distinguished by the presence of tags:
 
