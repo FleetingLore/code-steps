@@ -1,0 +1,20 @@
+[package]
+name = "code-steps"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Notebook-style code step display with syntax highlighting, breakpoints, and theme support for Rust"
+keywords = ["notebook", "syntax-highlighting", "terminal", "cli", "educational"]
+categories = ["command-line-interface", "development-tools"]
+readme = "README.md"
+
+[package.metadata.code-steps]
+theme = "ayu-dark"
+
+[dependencies]
+syntect = { version = "5", default-features = false, features = ["default-fancy"] }
+code-steps-macros = { path = "../code-steps-macros", version = "0.2" }
+
+[build-dependencies]
+toml = "0.8"

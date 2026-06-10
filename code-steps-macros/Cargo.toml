@@ -1,0 +1,16 @@
+[package]
+name = "code-steps-macros"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Proc macros for code-steps: notebook-style step display in the terminal"
+keywords = ["notebook", "macro"]
+categories = ["development-tools"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "2", features = ["full"] }
+quote = "1"
