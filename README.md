@@ -29,13 +29,13 @@ fn main() {
 Terminal output:
 
 ```
-// Create and save an image                         ← cyan comment
+[Create and save an image]                         ← cyan comment
    let img = Image::new(128, 128);                  ← syntax-highlighted
    img.save("output.png")?;
       ...                                           ← wait! pause
    ok                                               ← green
 
-// Load it back
+[Load it back]
    let img = Image::load("output.png")?;
    assert_eq!(img.width(), 128);
    ok
@@ -112,7 +112,7 @@ Any syntect theme key works.  Commonly used ones:
 |----------|---------|
 | `init_wait_filter()` | Parse CLI args, install global filter |
 | `print_file_header(path)` | Bold header with surrounding blank lines |
-| `print_step_header(comment)` | Cyan `// comment` line |
+| `print_step_header(comment)` | Cyan `[comment]` line |
 | `print_code(code)` | Syntax-highlighted code |
 | `print_step_done()` | Green `ok` |
 | `press_any_key_if(tags)` | Yellow prompt + wait for Enter (if filter allows) |

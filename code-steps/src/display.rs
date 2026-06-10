@@ -87,7 +87,7 @@ fn print_highlighted(code: &str) {
 // ── Step display API ──────────────────────────────────────────────────────
 //
 // Called by the `step!` macro expansion.  Print order:
-//   1. print_step_header  — cyan "// comment" line
+//   1. print_step_header  — cyan "[comment]" line
 //   2. print_code         — syntax-highlighted body
 //   3. (user code runs, possibly with wait!/skip!/ignore!)
 //   4. print_step_done    — green "   ok" line
@@ -99,9 +99,9 @@ pub fn print_file_header(filename: &str) {
     let _ = writeln!(io::stderr());
 }
 
-/// Cyan `// comment` line introducing the next step.
+/// Cyan `[comment]` line introducing the next step.
 pub fn print_step_header(comment: &str) {
-    let _ = writeln!(io::stderr(), "\x1b[36m// {}\x1b[0m", comment);
+    let _ = writeln!(io::stderr(), "\x1b[36m[{}]\x1b[0m", comment);
 }
 
 /// Print the dedented, comment-stripped, ignore-stripped source of the step
