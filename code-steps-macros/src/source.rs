@@ -339,7 +339,7 @@ pub fn strip_nested_steps(src: &str) -> String {
                     out.push_str(&format!("// {description}\n"));
                 }
             } else {
-                out.push_str("step!(");
+                out.push_str("step![");
             }
         } else {
             out.push(chars[i]);
@@ -347,4 +347,112 @@ pub fn strip_nested_steps(src: &str) -> String {
         }
     }
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dedent_strips_common_whitespace() {
+        let input = "        let x = 1;\n        let y = 2;\n    ";
+        let out = dedent(input);
+        assert_eq!(out, "let x = 1;\nlet y = 2;\n\n");
+    }
+
+    #[test]
+    fn dedent_empty() {
+        assert_eq!(dedent(""), "\n");
+    }
+
+    #[test]
+    fn dedent_blank_lines_not_counted() {
+        let input = "        let x = 1;\n\n        let y = 2;";
+        let out = dedent(input);
+        assert_eq!(out, "let x = 1;\n\nlet y = 2;\n");
+    }
+
+    #[test]
+    fn strip_line_comments() {
+        assert_eq!(
+            strip_comments("let x = 1; // comment\nlet y = 2;"),
+            "let x = 1; \nlet y = 2;"
+        );
+    }
+
+    #[test]
+    fn strip_block_comments() {
+        assert_eq!(strip_comments("let x = /* hi */ 1;"), "let x =  1;");
+    }
+
+    #[test]
+    fn strip_ignores_bracket_syntax() {
+        let input = "        code_steps::ignore![(\"setup\") { heavy(); }]; let x = 1;";
+        let out = strip_ignores(input);
+        assert!(out.contains("// (ignored setup)"), "got: {out}");
+        assert!(out.contains("let x = 1;"), "got: {out}");
+        assert!(!out.contains("ignore!"), "got: {out}");
+        assert!(!out.contains("heavy()"), "got: {out}");
+    }
+
+    #[test]
+    fn strip_ignores_multiple_tags() {
+        let input = "ignore![(\"a\", \"b\") { f(); }];";
+        let out = strip_ignores(input);
+        assert!(out.contains("// (ignored a, b)"), "got: {out}");
+    }
+
+    #[test]
+    fn strip_ignores_does_not_capture_outside() {
+        let input = "ignore![(\"init\") { f(); }]; let x = vec![\"a\", \"b\"];";
+        let out = strip_ignores(input);
+        assert!(out.contains("// (ignored init)"), "got: {out}");
+        assert!(out.contains("vec![\"a\""), "got: {out}");
+        assert!(!out.contains("(ignored init, a)"), "got: {out}");
+    }
+
+    #[test]
+    fn strip_nested_steps_bracket_syntax() {
+        let input = "step![\"Inner\", { do_stuff(); }];\nprintln!(\"outer\");";
+        let out = strip_nested_steps(input);
+        assert!(out.contains("// Inner"), "got: {out}");
+        assert!(out.contains("println!(\"outer\")"), "got: {out}");
+        assert!(!out.contains("do_stuff()"), "got: {out}");
+    }
+
+    #[test]
+    fn strip_nested_steps_with_tags() {
+        let input = "step![\"Check\", \"tag\", { verify(); }];";
+        let out = strip_nested_steps(input);
+        assert!(out.contains("// Check"), "got: {out}");
+        assert!(!out.contains("verify()"), "got: {out}");
+    }
+
+    #[test]
+    fn restore_newlines_after_semicolons() {
+        let input = "let x = 1; let y = 2;";
+        let out = restore_newlines(input);
+        assert!(out.contains(";\nlet"), "got: {out}");
+    }
+
+    #[test]
+    fn restore_newlines_not_before_brace() {
+        let input = "if true { x(); } let y = 2;";
+        let out = restore_newlines(input);
+        assert!(!out.contains(";\n}"), "got: {out}");
+    }
+
+    #[test]
+    fn collapse_joins_continuation_lines() {
+        let input = "let x =\n    1;";
+        let out = collapse_continuations(input);
+        assert!(out.contains("let x =     1;"), "got: {out}");
+    }
+
+    #[test]
+    fn collapse_keeps_semicolon_terminated() {
+        let input = "let x = 1;\nlet y = 2;";
+        let out = collapse_continuations(input);
+        assert!(out.contains(";\nlet"), "got: {out}");
+    }
 }
