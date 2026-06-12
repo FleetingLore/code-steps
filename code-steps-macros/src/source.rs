@@ -254,6 +254,50 @@ pub fn collapse_continuations(src: &str) -> String {
     out
 }
 
+/// Strip `wait!["..."]` and `wait![]` calls from the display — the
+/// pause prompt already conveys the message.
+pub fn strip_waits(src: &str) -> String {
+    let chars: Vec<char> = src.chars().collect();
+    let len = chars.len();
+    let mut out = String::with_capacity(len);
+    let mut i = 0;
+    while i < len {
+        if i + 6 < len && chars[i..].starts_with(&['w', 'a', 'i', 't', '!', '[']) {
+            i += 6;
+            let mut depth: i32 = 1;
+            let mut in_string = false;
+            while i < len && depth > 0 {
+                match chars[i] {
+                    '"' if !in_string => in_string = !in_string,
+                    '\\' if in_string => {
+                        i += 1;
+                    }
+                    '[' if !in_string => depth += 1,
+                    ']' if !in_string => {
+                        depth -= 1;
+                        if depth == 0 {
+                            i += 1;
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+                i += 1;
+            }
+            while i < len && chars[i].is_whitespace() {
+                i += 1;
+            }
+            if i < len && chars[i] == ';' {
+                i += 1;
+            }
+        } else {
+            out.push(chars[i]);
+            i += 1;
+        }
+    }
+    out
+}
+
 /// Find `step!["…", …, { … }]` calls in the source and replace each
 /// with a `// description` placeholder that shows the step's title.
 ///

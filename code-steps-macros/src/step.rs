@@ -163,6 +163,7 @@ pub fn step_impl(input: TokenStream) -> TokenStream {
     let s = source::collapse_continuations(&s);
     let s = source::strip_comments(&s);
     let s = source::strip_ignores(&s);
+    let s = source::strip_waits(&s);
     let display_str = source::strip_nested_steps(&s);
 
     // ── Phase 2: produce the runtime expansion ──
