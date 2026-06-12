@@ -287,7 +287,7 @@ fn try_read_enter() -> bool {
         if n <= 0 {
             return false;
         }
-        if buf[..n as usize].contains(&b'\n') {
+        if buf[..n as usize].contains(&b'\n') || buf[..n as usize].contains(&b'\r') {
             return true;
         }
     }
@@ -499,7 +499,7 @@ pub fn press_any_key_if(tags: &[&str]) {
     let mut byte = [0u8; 1];
     loop {
         let n = unsafe { raw::read(0, byte.as_mut_ptr(), 1) };
-        if n == 1 && byte[0] == b'\n' {
+        if n == 1 && (byte[0] == b'\n' || byte[0] == b'\r') {
             break;
         }
         std::thread::sleep(std::time::Duration::from_millis(10));
