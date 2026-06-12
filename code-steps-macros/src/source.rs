@@ -105,8 +105,8 @@ pub fn strip_ignores(src: &str) -> String {
     let mut i = 0;
 
     while i < len {
-        // Match `ignore!(` — possibly prefixed with `crate::` or `code_steps::`
-        if i + 8 < len && chars[i..].starts_with(&['i', 'g', 'n', 'o', 'r', 'e', '!', '(']) {
+        // Match `ignore![` — possibly prefixed with `crate::` or `code_steps::`
+        if i + 8 < len && chars[i..].starts_with(&['i', 'g', 'n', 'o', 'r', 'e', '!', '[']) {
             // Capture the indentation from the line being replaced.
             // Extract only the leading whitespace (not the `code_steps::` prefix).
             let line_prefix = match out.rfind('\n') {
@@ -121,6 +121,10 @@ pub fn strip_ignores(src: &str) -> String {
             out.truncate(out.len().saturating_sub(line_prefix.len()));
 
             i += 7; // skip "ignore!"
+            // Skip the macro's opening `[`
+            if i < len && chars[i] == '[' {
+                i += 1;
+            }
             let mut depth;
             // Skip the tag list in parens: `("tag1", "tag2")` — also capture tags
             let mut tags = Vec::new();
@@ -178,11 +182,11 @@ pub fn strip_ignores(src: &str) -> String {
                     i += 1;
                 }
             }
-            // Consume closing `)` and `;` of the ignore!(…) call
+            // Consume closing `]` and `;` of the ignore![…] call
             while i < len && chars[i].is_whitespace() {
                 i += 1;
             }
-            if i < len && chars[i] == ')' {
+            if i < len && chars[i] == ']' {
                 i += 1;
             }
             while i < len && chars[i].is_whitespace() {
@@ -270,10 +274,10 @@ pub fn strip_nested_steps(src: &str) -> String {
     let mut i = 0;
 
     while i < len {
-        // Match `step!(`
-        if i + 6 < len && chars[i..].starts_with(&['s', 't', 'e', 'p', '!', '(']) {
+        // Match `step![`
+        if i + 6 < len && chars[i..].starts_with(&['s', 't', 'e', 'p', '!', '[']) {
             let start = i;
-            i += 6; // skip "step!("
+            i += 6; // skip "step!["
 
             // ── Extract the step description ──
             let mut description = String::new();
@@ -297,8 +301,8 @@ pub fn strip_nested_steps(src: &str) -> String {
                 }
             }
 
-            // ── Skip the rest of the step!(…) invocation ──
-            let mut depth: i32 = 1; // inside the outer `(`
+            // ── Skip the rest of the step![…] invocation ──
+            let mut depth: i32 = 1; // inside the outer `[`
             let mut in_string = false;
             let mut in_char = false;
 
@@ -309,16 +313,14 @@ pub fn strip_nested_steps(src: &str) -> String {
                     '\\' if in_string || in_char => {
                         i += 1; // skip escaped char
                     }
-                    '(' if !in_string && !in_char => depth += 1,
-                    ')' if !in_string && !in_char => {
+                    '(' | '[' | '{' if !in_string && !in_char => depth += 1,
+                    ')' | ']' | '}' if !in_string && !in_char => {
                         depth -= 1;
                         if depth == 0 {
-                            i += 1; // consume the closing `)`
+                            i += 1; // consume the closing delimiter
                             break;
                         }
                     }
-                    '{' if !in_string && !in_char => depth += 1,
-                    '}' if !in_string && !in_char => depth -= 1,
                     _ => {}
                 }
                 i += 1;
