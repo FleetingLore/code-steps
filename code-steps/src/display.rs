@@ -591,12 +591,17 @@ pub fn press_any_key_if(tags: &[&str], msg: Option<&str>) {
         let _ = writeln!(io::stderr(), "{indent}\x1b[33m    {msg}\x1b[0m");
     } else if let Some((last, parents)) = segments.split_last() {
         if parents.is_empty() {
-            // Top-level: check if we just exited a nested child
             let exited = LAST_EXITED.with(|e| e.borrow_mut().take());
             if let Some(child) = exited {
-                let _ = writeln!(io::stderr(), "{indent}\x1b[33m    < \x1b[32m{child}\x1b[0m");
+                // Last child exited: "Parent < Child" → "< Parent"
+                let _ = writeln!(
+                    io::stderr(),
+                    "{indent}\x1b[33m    {last} < \x1b[32m{child}\x1b[0m"
+                );
+                let _ = writeln!(io::stderr(), "{indent}\x1b[33m    < \x1b[32m{last}\x1b[0m");
+            } else {
+                let _ = writeln!(io::stderr(), "{indent}\x1b[32m    {last} waiting\x1b[0m");
             }
-            let _ = writeln!(io::stderr(), "{indent}\x1b[32m    {last} waiting\x1b[0m");
         } else {
             // Exiting: don't show here — sibling transition or parent will handle it
             LAST_EXITED.with(|e| *e.borrow_mut() = Some(last.clone()));
