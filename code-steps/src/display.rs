@@ -239,6 +239,57 @@ fn print_code_typewriter(code: &str) {
     #[cfg(unix)]
     let _raw_guard = RawModeGuard::enter();
 
+    for segment in split_by_waits(code) {
+        match segment {
+            WaitSegment::Code(text) => print_highlighted_segment(&text),
+            WaitSegment::Pause(msg) => {
+                let indent = step_indent();
+                let _ = writeln!(io::stderr(), "{indent}\x1b[33m    {msg}\x1b[0m");
+                wait_for_enter();
+            }
+        }
+    }
+}
+
+enum WaitSegment {
+    Code(String),
+    Pause(String),
+}
+
+fn split_by_waits(code: &str) -> Vec<WaitSegment> {
+    let mut segments = Vec::new();
+    let mut rest = code;
+    while let Some(pos) = rest.find("wait![") {
+        if pos > 0 {
+            segments.push(WaitSegment::Code(rest[..pos].to_string()));
+        }
+        rest = &rest[pos + 6..]; // skip "wait!["
+        // Extract message: either "..." or empty (noarg wait)
+        let msg = if rest.starts_with('"') {
+            rest = &rest[1..];
+            let end = rest.find('"').unwrap_or(0);
+            let msg = rest[..end].to_string();
+            rest = &rest[end + 1..];
+            msg
+        } else {
+            String::new()
+        };
+        // Skip `]` and `;`
+        if let Some(end) = rest.find(']') {
+            rest = &rest[end + 1..];
+        }
+        rest = rest.trim_start();
+        rest = rest.strip_prefix(';').unwrap_or(rest);
+        segments.push(WaitSegment::Pause(msg));
+    }
+    if !rest.is_empty() {
+        segments.push(WaitSegment::Code(rest.to_string()));
+    }
+    segments
+}
+
+fn print_highlighted_segment(code: &str) {
+    use std::io::Write;
     let indent = step_indent();
     let (ss, ts) = highlighting();
     let syntax = ss.find_syntax_by_name("Rust").expect("Rust syntax");
@@ -295,10 +346,21 @@ fn print_code_typewriter(code: &str) {
             }
             let _ = io::stderr().flush();
         }
-        // Line pause — also check for Enter to skip
         if !fast_forward {
             sleep_or_skip(line_pause);
         }
+    }
+}
+
+fn wait_for_enter() {
+    setup_nonblocking_stdin();
+    let mut byte = [0u8; 1];
+    loop {
+        let n = unsafe { raw::read(0, byte.as_mut_ptr(), 1) };
+        if n == 1 && (byte[0] == b'\n' || byte[0] == b'\r') {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
     }
 }
 
