@@ -210,7 +210,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 static TYPEWRITER: AtomicBool = AtomicBool::new(false);
 static TYPEWRITER_SPEED: AtomicU64 = AtomicU64::new(15);
 static TYPEWRITER_LINE_PAUSE: AtomicU64 = AtomicU64::new(150);
-static TYPEWRITER_JUST_WAITED: AtomicBool = AtomicBool::new(false);
+static TYPEWRITER_WAIT_COUNT: AtomicU64 = AtomicU64::new(0);
 
 fn init_typewriter_defaults() {
     use std::sync::OnceLock;
@@ -257,7 +257,7 @@ fn print_code_typewriter(code: &str) {
             WaitSegment::Pause(msg) => {
                 let indent = step_indent();
                 let _ = writeln!(io::stderr(), "{indent}\x1b[33m    {msg}\x1b[0m");
-                TYPEWRITER_JUST_WAITED.store(true, Ordering::Relaxed);
+                TYPEWRITER_WAIT_COUNT.fetch_add(1, Ordering::Relaxed);
                 wait_for_enter();
             }
         }
@@ -579,8 +579,10 @@ pub fn press_any_key_if(tags: &[&str], msg: Option<&str>) {
             return;
         }
     }
-    // If the typewriter already handled this wait, skip.
-    if TYPEWRITER_JUST_WAITED.swap(false, Ordering::Relaxed) {
+    // If the typewriter already handled N waits, skip N runtime waits.
+    let remaining = TYPEWRITER_WAIT_COUNT.load(Ordering::Relaxed);
+    if remaining > 0 {
+        TYPEWRITER_WAIT_COUNT.store(remaining - 1, Ordering::Relaxed);
         return;
     }
     let segments: Vec<String> = STEP_PATH.with(|p| p.borrow().clone());
@@ -589,11 +591,15 @@ pub fn press_any_key_if(tags: &[&str], msg: Option<&str>) {
         let _ = writeln!(io::stderr(), "{indent}\x1b[33m    {msg}\x1b[0m");
     } else if let Some((last, parents)) = segments.split_last() {
         if parents.is_empty() {
+            // Top-level: check if we just exited a nested child
+            let exited = LAST_EXITED.with(|e| e.borrow_mut().take());
+            if let Some(child) = exited {
+                let _ = writeln!(io::stderr(), "{indent}\x1b[33m    < \x1b[32m{child}\x1b[0m");
+            }
             let _ = writeln!(io::stderr(), "{indent}\x1b[32m    {last} waiting\x1b[0m");
         } else {
-            // Exiting: "< Child"
+            // Exiting: don't show here — sibling transition or parent will handle it
             LAST_EXITED.with(|e| *e.borrow_mut() = Some(last.clone()));
-            let _ = writeln!(io::stderr(), "{indent}\x1b[33m    < \x1b[32m{last}\x1b[0m");
         }
     } else {
         let _ = writeln!(io::stderr(), "{indent}\x1b[33m    ...\x1b[0m");
@@ -706,13 +712,11 @@ mod tests {
     }
 
     #[test]
-    fn typewriter_flag_skips_runtime_wait() {
-        TYPEWRITER_JUST_WAITED.store(true, Ordering::Relaxed);
-        // press_any_key_if should return immediately without blocking
-        press_any_key_if(&[], None);
-        assert!(
-            !TYPEWRITER_JUST_WAITED.load(Ordering::Relaxed),
-            "flag should be cleared"
-        );
+    fn typewriter_wait_counter_skips_runtime_waits() {
+        TYPEWRITER_WAIT_COUNT.store(3, Ordering::Relaxed);
+        press_any_key_if(&[], None); // should skip, count → 2
+        press_any_key_if(&[], None); // should skip, count → 1
+        press_any_key_if(&[], None); // should skip, count → 0
+        assert_eq!(TYPEWRITER_WAIT_COUNT.load(Ordering::Relaxed), 0);
     }
 }
