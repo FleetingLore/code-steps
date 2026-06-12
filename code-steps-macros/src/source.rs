@@ -257,44 +257,39 @@ pub fn collapse_continuations(src: &str) -> String {
 /// Strip `wait!["..."]` and `wait![]` calls from the display — the
 /// pause prompt already conveys the message.
 pub fn strip_waits(src: &str) -> String {
-    let chars: Vec<char> = src.chars().collect();
-    let len = chars.len();
-    let mut out = String::with_capacity(len);
-    let mut i = 0;
-    while i < len {
-        if i + 6 < len && chars[i..].starts_with(&['w', 'a', 'i', 't', '!', '[']) {
-            i += 6;
-            let mut depth: i32 = 1;
-            let mut in_string = false;
-            while i < len && depth > 0 {
-                match chars[i] {
-                    '"' if !in_string => in_string = !in_string,
-                    '\\' if in_string => {
-                        i += 1;
+    let mut out = String::with_capacity(src.len());
+    let mut rest = src;
+    while let Some(pos) = rest.find("wait![") {
+        out.push_str(&rest[..pos]);
+        rest = &rest[pos + 6..]; // skip "wait!["
+        let mut depth: i32 = 1;
+        let mut in_string = false;
+        let mut escaped = false;
+        let mut end = 0;
+        for (j, ch) in rest.char_indices() {
+            if escaped {
+                escaped = false;
+                continue;
+            }
+            match ch {
+                '\\' if in_string => escaped = true,
+                '"' => in_string = !in_string,
+                '[' if !in_string => depth += 1,
+                ']' if !in_string => {
+                    depth -= 1;
+                    if depth == 0 {
+                        end = j + 1;
+                        break;
                     }
-                    '[' if !in_string => depth += 1,
-                    ']' if !in_string => {
-                        depth -= 1;
-                        if depth == 0 {
-                            i += 1;
-                            break;
-                        }
-                    }
-                    _ => {}
                 }
-                i += 1;
+                _ => {}
             }
-            while i < len && chars[i].is_whitespace() {
-                i += 1;
-            }
-            if i < len && chars[i] == ';' {
-                i += 1;
-            }
-        } else {
-            out.push(chars[i]);
-            i += 1;
         }
+        rest = &rest[end..];
+        rest = rest.trim_start();
+        rest = rest.strip_prefix(';').unwrap_or(rest);
     }
+    out.push_str(rest);
     out
 }
 
@@ -498,5 +493,42 @@ mod tests {
         let input = "let x = 1;\nlet y = 2;";
         let out = collapse_continuations(input);
         assert!(out.contains(";\nlet"), "got: {out}");
+    }
+
+    // ── strip_waits ───────────────────────────────────────────────────
+
+    #[test]
+    fn strip_waits_removes_call() {
+        let out = strip_waits("wait![\"h\"]; x");
+        assert_eq!(out, " x", "got: {out:?}");
+    }
+
+    #[test]
+    fn strip_waits_removes_noarg() {
+        let out = strip_waits("wait![]; x");
+        assert_eq!(out, " x", "got: {out:?}");
+    }
+
+    #[test]
+    fn strip_waits_preserves_other_code() {
+        let out = strip_waits("wait![\"a\"]; let b = 1; wait![\"c\"]; for i in 0..1 { f(i); }");
+        assert!(out.contains("let b = 1;"), "got: {out:?}");
+        assert!(out.contains("for i in 0..1 { f(i); }"), "got: {out:?}");
+    }
+
+    #[test]
+    fn pipeline_keeps_code_after_waits() {
+        let input = "    let red = S { a: 1, };\n    wait![\"msg\"];\n    let blue = S { b: 2, };\n    wait![\"msg2\"];\n    for i in 0..1 { f(i); }";
+        let s = dedent(input);
+        let s = restore_newlines(&s);
+        let s = collapse_continuations(&s);
+        let s = strip_comments(&s);
+        let s = strip_ignores(&s);
+        let s = strip_waits(&s);
+        let out = strip_nested_steps(&s);
+        assert!(out.contains("let red"), "got: {out:?}");
+        assert!(out.contains("let blue"), "got: {out:?}");
+        assert!(out.contains("for i in 0..1"), "got: {out:?}");
+        assert!(!out.contains("wait!"), "got: {out:?}");
     }
 }
