@@ -471,10 +471,9 @@ pub fn init_wait_filter() {
 }
 
 /// Called by the `wait!()` macro expansion and `step!`'s auto-pause.
-/// Prints the current nesting path and waits for Enter if the filter
-/// allows.  The last segment is highlighted in green (like `ok`); the
-/// parent segments are yellow.
-pub fn press_any_key_if(tags: &[&str]) {
+/// Prints the current nesting path (or a custom message) and waits for
+/// Enter if the filter allows.
+pub fn press_any_key_if(tags: &[&str], msg: Option<&str>) {
     if let Some(filter) = FILTER.get() {
         if !filter.matches(tags) {
             return;
@@ -482,7 +481,9 @@ pub fn press_any_key_if(tags: &[&str]) {
     }
     let segments: Vec<String> = STEP_PATH.with(|p| p.borrow().clone());
     let indent = step_indent();
-    if let Some((last, parents)) = segments.split_last() {
+    if let Some(msg) = msg {
+        let _ = writeln!(io::stderr(), "{indent}\x1b[33m    {msg}\x1b[0m");
+    } else if let Some((last, parents)) = segments.split_last() {
         if parents.is_empty() {
             let _ = writeln!(io::stderr(), "{indent}\x1b[32m    {last} waiting\x1b[0m");
         } else {
