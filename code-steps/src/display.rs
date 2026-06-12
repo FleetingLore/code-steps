@@ -104,6 +104,7 @@ fn print_highlighted(code: &str) {
 
 thread_local! {
     static STEP_PATH: RefCell<Vec<String>> = RefCell::new(Vec::new());
+    static LAST_EXITED: RefCell<Option<String>> = RefCell::new(None);
 }
 
 /// RAII guard: pushes the step name on creation, pops on drop.
@@ -125,17 +126,27 @@ pub fn enter_step(name: &str) -> StepGuard {
 }
 
 /// If already inside a parent step, pause before entering a child step.
-/// Shows "Parent: Child" as the transition prompt.
+/// Shows "Parent: Child" (entering) or "exited > entering" (sibling transition).
 pub fn pause_if_nested(child: &str) {
     let nested = STEP_PATH.with(|p| !p.borrow().is_empty());
     if nested {
         let segments: Vec<String> = STEP_PATH.with(|p| p.borrow().clone());
         let indent = step_indent();
         let parents = segments.join(" : ");
-        let _ = writeln!(
-            io::stderr(),
-            "{indent}\x1b[33m    {parents}: \x1b[32m{child}\x1b[0m"
-        );
+        let sibling = LAST_EXITED.with(|e| e.borrow_mut().take());
+        if let Some(prev) = sibling {
+            // Sibling transition: "prev > child"
+            let _ = writeln!(
+                io::stderr(),
+                "{indent}\x1b[33m    {prev} > \x1b[32m{child}\x1b[0m"
+            );
+        } else {
+            // Entering: "Parent: Child"
+            let _ = writeln!(
+                io::stderr(),
+                "{indent}\x1b[33m    {parents}: \x1b[32m{child}\x1b[0m"
+            );
+        }
         // Non-blocking wait for Enter
         setup_nonblocking_stdin();
         let mut byte = [0u8; 1];
@@ -199,6 +210,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 static TYPEWRITER: AtomicBool = AtomicBool::new(false);
 static TYPEWRITER_SPEED: AtomicU64 = AtomicU64::new(15);
 static TYPEWRITER_LINE_PAUSE: AtomicU64 = AtomicU64::new(150);
+static TYPEWRITER_JUST_WAITED: AtomicBool = AtomicBool::new(false);
 
 fn init_typewriter_defaults() {
     use std::sync::OnceLock;
@@ -245,6 +257,7 @@ fn print_code_typewriter(code: &str) {
             WaitSegment::Pause(msg) => {
                 let indent = step_indent();
                 let _ = writeln!(io::stderr(), "{indent}\x1b[33m    {msg}\x1b[0m");
+                TYPEWRITER_JUST_WAITED.store(true, Ordering::Relaxed);
                 wait_for_enter();
             }
         }
@@ -566,6 +579,10 @@ pub fn press_any_key_if(tags: &[&str], msg: Option<&str>) {
             return;
         }
     }
+    // If the typewriter already handled this wait, skip.
+    if TYPEWRITER_JUST_WAITED.swap(false, Ordering::Relaxed) {
+        return;
+    }
     let segments: Vec<String> = STEP_PATH.with(|p| p.borrow().clone());
     let indent = step_indent();
     if let Some(msg) = msg {
@@ -574,12 +591,9 @@ pub fn press_any_key_if(tags: &[&str], msg: Option<&str>) {
         if parents.is_empty() {
             let _ = writeln!(io::stderr(), "{indent}\x1b[32m    {last} waiting\x1b[0m");
         } else {
-            // Exiting: "Parent < Child"
-            let _ = writeln!(
-                io::stderr(),
-                "{indent}\x1b[33m    {} < \x1b[32m{last}\x1b[0m",
-                parents.join(" : ")
-            );
+            // Exiting: "< Child"
+            LAST_EXITED.with(|e| *e.borrow_mut() = Some(last.clone()));
+            let _ = writeln!(io::stderr(), "{indent}\x1b[33m    < \x1b[32m{last}\x1b[0m");
         }
     } else {
         let _ = writeln!(io::stderr(), "{indent}\x1b[33m    ...\x1b[0m");
@@ -610,5 +624,95 @@ impl WaitFilter {
         let passes_exclude =
             tags.is_empty() || !tags.iter().any(|t| self.exclude.iter().any(|e| e == t));
         passes_include && passes_exclude
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn split_by_waits_empty() {
+        let s = split_by_waits("no waits here");
+        assert_eq!(s.len(), 1);
+        match &s[0] {
+            WaitSegment::Code(c) => assert_eq!(c, "no waits here"),
+            _ => panic!("expected Code"),
+        }
+    }
+
+    #[test]
+    fn split_by_waits_single() {
+        let s = split_by_waits("let x = 1; wait![\"msg\"]; let y = 2;");
+        assert_eq!(s.len(), 3); // code, pause, code
+        match &s[0] {
+            WaitSegment::Code(c) => assert!(c.contains("let x"), "{c}"),
+            _ => panic!(),
+        }
+        match &s[1] {
+            WaitSegment::Pause(m) => assert_eq!(m, "msg"),
+            _ => panic!(),
+        }
+        match &s[2] {
+            WaitSegment::Code(c) => assert!(c.contains("let y"), "{c}"),
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn split_by_waits_noarg() {
+        let s = split_by_waits("wait![]; x");
+        assert_eq!(s.len(), 2);
+        match &s[1] {
+            WaitSegment::Code(c) => assert_eq!(c, " x"),
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn split_by_waits_multiple() {
+        let s = split_by_waits("wait![\"a\"]; let b = 1; wait![\"c\"]; let d = 2;");
+        assert_eq!(s.len(), 4);
+        match &s[0] {
+            WaitSegment::Pause(m) => assert_eq!(m, "a"),
+            _ => panic!(),
+        }
+        match &s[1] {
+            WaitSegment::Code(c) => assert!(c.contains("let b"), "{c}"),
+            _ => panic!(),
+        }
+        match &s[2] {
+            WaitSegment::Pause(m) => assert_eq!(m, "c"),
+            _ => panic!(),
+        }
+        match &s[3] {
+            WaitSegment::Code(c) => assert!(c.contains("let d"), "{c}"),
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn split_by_waits_keeps_code_structure() {
+        let input = "let red = S { a: 1, }; wait![\"msg\"]; for i in 0..1 { f(i); }";
+        let s = split_by_waits(input);
+        match &s[0] {
+            WaitSegment::Code(c) => assert!(c.contains("S { a: 1, }"), "{c}"),
+            _ => panic!(),
+        }
+        match &s[2] {
+            WaitSegment::Code(c) => assert!(c.contains("for i in 0..1 { f(i); }"), "{c}"),
+            _ => panic!(),
+        }
+    }
+
+    #[test]
+    fn typewriter_flag_skips_runtime_wait() {
+        TYPEWRITER_JUST_WAITED.store(true, Ordering::Relaxed);
+        // press_any_key_if should return immediately without blocking
+        press_any_key_if(&[], None);
+        assert!(
+            !TYPEWRITER_JUST_WAITED.load(Ordering::Relaxed),
+            "flag should be cleared"
+        );
     }
 }
