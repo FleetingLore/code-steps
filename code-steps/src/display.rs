@@ -124,6 +124,31 @@ pub fn enter_step(name: &str) -> StepGuard {
     StepGuard
 }
 
+/// If already inside a parent step, pause before entering a child step.
+/// Shows "Parent: Child" as the transition prompt.
+pub fn pause_if_nested(child: &str) {
+    let nested = STEP_PATH.with(|p| !p.borrow().is_empty());
+    if nested {
+        let segments: Vec<String> = STEP_PATH.with(|p| p.borrow().clone());
+        let indent = step_indent();
+        let parents = segments.join(" : ");
+        let _ = writeln!(
+            io::stderr(),
+            "{indent}\x1b[33m    {parents}: \x1b[32m{child}\x1b[0m"
+        );
+        // Non-blocking wait for Enter
+        setup_nonblocking_stdin();
+        let mut byte = [0u8; 1];
+        loop {
+            let n = unsafe { raw::read(0, byte.as_mut_ptr(), 1) };
+            if n == 1 && (byte[0] == b'\n' || byte[0] == b'\r') {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+    }
+}
+
 /// Bold header with blank lines before and after.
 pub fn print_file_header(filename: &str) {
     let _ = writeln!(io::stderr());
@@ -471,8 +496,8 @@ pub fn init_wait_filter() {
 }
 
 /// Called by the `wait!()` macro expansion and `step!`'s auto-pause.
-/// Prints the current nesting path (or a custom message) and waits for
-/// Enter if the filter allows.
+/// Formats: "Outer < Inner" (exiting nested), or "Name waiting" (top-level),
+/// or a custom message if provided.
 pub fn press_any_key_if(tags: &[&str], msg: Option<&str>) {
     if let Some(filter) = FILTER.get() {
         if !filter.matches(tags) {
@@ -487,9 +512,12 @@ pub fn press_any_key_if(tags: &[&str], msg: Option<&str>) {
         if parents.is_empty() {
             let _ = writeln!(io::stderr(), "{indent}\x1b[32m    {last} waiting\x1b[0m");
         } else {
-            let _ = write!(io::stderr(), "{indent}\x1b[33m    {}", parents.join(" : "));
-            let _ = write!(io::stderr(), " : ");
-            let _ = writeln!(io::stderr(), "\x1b[32m{last} waiting\x1b[0m");
+            // Exiting: "Parent < Child"
+            let _ = writeln!(
+                io::stderr(),
+                "{indent}\x1b[33m    {} < \x1b[32m{last}\x1b[0m",
+                parents.join(" : ")
+            );
         }
     } else {
         let _ = writeln!(io::stderr(), "{indent}\x1b[33m    ...\x1b[0m");

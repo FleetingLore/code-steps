@@ -8,7 +8,7 @@
 //!
 //! ```rust,ignore
 //! // User writes:
-//! skip!(("debug") { dbg!(x); })
+//! skip![("debug") { dbg!(x); }]
 //!
 //! // Expands to:
 //! if !::code_steps::display::filter_matches(&["debug"]) {
@@ -16,13 +16,13 @@
 //! }
 //! ```
 //!
-//! The display string still contains the original `skip!((…) { … })` because
+//! The display string still contains the original `skip![(…) { … }]` because
 //! `step!`'s Phase 1 works on the raw source — it doesn't see this expanded `if`.
 //!
 //! ## Parser (shared with `ignore!`)
 //!
 //! Uses [`SkipInput`] to parse the `("tag", …) { body }` syntax.  Note the
-//! outer `(` `)` belong to the macro invocation; the parser receives tokens
+//! outer `[` `]` belong to the macro invocation; the parser receives tokens
 //! *inside* them, starting with another `(` `)` pair for the tags, then the
 //! block.
 

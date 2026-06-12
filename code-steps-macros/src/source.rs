@@ -16,10 +16,10 @@
 //! strip_comments()    ── remove // and /* */ comments
 //!   │
 //!   ▼
-//! strip_ignores()     ── replace ignore!(…) { … } with // (ignored)
+//! strip_ignores()     ── replace ignore![…] { … } with // (ignored)
 //!   │
 //!   ▼
-//! strip_nested_steps()── replace step!(…) { … } with // (nested step)
+//! strip_nested_steps()── replace step![…] { … } with // (nested step)
 //!   │
 //!   ▼
 //! display string       ── printed verbatim by print_code()
@@ -89,7 +89,7 @@ pub fn strip_comments(src: &str) -> String {
     out
 }
 
-/// Find `ignore!(("…", …) { … })` blocks in the source and replace each
+/// Find `ignore![("…", …) { … }]` blocks in the source and replace each
 /// with a single `// (ignored)` placeholder.
 ///
 /// The block's code still exists in the Rust AST and **will execute at
@@ -250,7 +250,7 @@ pub fn collapse_continuations(src: &str) -> String {
     out
 }
 
-/// Find `step!("…", …, { … })` calls in the source and replace each
+/// Find `step!["…", …, { … }]` calls in the source and replace each
 /// with a `// description` placeholder that shows the step's title.
 ///
 /// When a `step!` contains nested `step!` calls, the outer block's display

@@ -14,7 +14,7 @@
 //!
 //! ```rust,ignore
 //! // User writes:
-//! ignore!(("setup") { heavy_init(); })
+//! ignore![("setup") { heavy_init(); }]
 //!
 //! // Expands to:
 //! { { heavy_init(); } }
@@ -26,7 +26,7 @@
 //! ## Hidden from display
 //!
 //! `step!`'s Phase 1 ([`strip_ignores`]) scans the raw source text and
-//! replaces every `ignore!(…) { … }` block with `// (ignored)`.  This is
+//! replaces every `ignore![…] { … }` block with `// (ignored)`.
 //! pure text replacement at compile time — the proc macro expansion
 //! (this file) is only concerned with runtime execution.
 //!

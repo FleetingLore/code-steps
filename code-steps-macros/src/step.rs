@@ -5,17 +5,17 @@
 //! for Enter.  Everything else — `wait!`, `skip!`, `ignore!` — is used
 //! *inside* a `step!` block for finer control.
 //!
-//! The auto-pause means you rarely need `wait!()` at the end of a step.
-//! Use `wait!()` *inside* a step only when you want to pause mid-step
-//! (e.g. between two sub-operations), or `wait!("tag")` for a conditional
+//! The auto-pause means you rarely need `wait![]` at the end of a step.
+//! Use `wait![]` *inside* a step only when you want to pause mid-step
+//! (e.g. between two sub-operations), or `wait!["tag"]` for a conditional
 //! pause controlled by the filter.
 //!
 //! # Two forms
 //!
 //! | Form | Behaviour |
 //! |------|-----------|
-//! | `step!("desc", { … })` | Always displays and executes |
-//! | `step!("desc", "tag", { … })` | Displays/executes **only if** the tag passes the global filter |
+//! | `step!["desc", { … }]` | Always displays and executes |
+//! | `step!["desc", "tag", { … }]` | Displays/executes **only if** the tag passes the global filter |
 //!
 //! The first form is for steps that should always run.  The second form lets
 //! you make a step **optional** — controlled from the command line without
@@ -30,14 +30,14 @@
 //! ```rust,ignore
 //! init_wait_filter();
 //!
-//! step!("Basic setup", "basic", {
+//! step!["Basic setup", "basic", {
 //!     load_data();
-//!     wait!("basic");
+//!     wait!["basic"];
 //! });
 //!
-//! step!("Advanced analysis", "advanced", {
+//! step!["Advanced analysis", "advanced", {
 //!     run_heavy_computation();
-//!     wait!("advanced");
+//!     wait!["advanced"];
 //! });
 //! ```
 //!
@@ -111,7 +111,7 @@ use crate::source;
 
 // ── StepInput parser ───────────────────────────────────────────────────────
 
-/// Parsed form of `step!("description"[, "tag"…], { … })`.
+/// Parsed form of `step!["description"[, "tag"…], { … }]`.
 ///
 /// Tags are optional.  If present, they appear as comma-separated string
 /// literals between the description and the block.
@@ -174,6 +174,7 @@ pub fn step_impl(input: TokenStream) -> TokenStream {
 
     let expanded = if tag_refs.is_empty() {
         quote! {{
+            ::code_steps::display::pause_if_nested(#comment_str);
             let __step_guard = ::code_steps::display::enter_step(#comment_str);
             ::code_steps::display::print_step_separator();
             ::code_steps::display::print_step_header(#comment_str);
@@ -185,6 +186,7 @@ pub fn step_impl(input: TokenStream) -> TokenStream {
     } else {
         quote! {{
             if ::code_steps::display::filter_matches(&[#(#tag_refs),*]) {
+                ::code_steps::display::pause_if_nested(#comment_str);
                 let __step_guard = ::code_steps::display::enter_step(#comment_str);
                 ::code_steps::display::print_step_separator();
                 ::code_steps::display::print_step_header(#comment_str);

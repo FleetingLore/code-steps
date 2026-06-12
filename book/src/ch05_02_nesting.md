@@ -6,14 +6,14 @@ The auto-pause shows the full nesting path so you always know where you are.
 ## Basic nesting
 
 ```rust
-step!("Compile", {
-    step!("Tokenise", {
+step!["Compile", {
+    step!["Tokenise", {
         println!("Breaking into tokens…");
-    });
-    step!("Parse", {
+    }];
+    step!["Parse", {
         println!("Building AST…");
-    });
-});
+    }];
+}];
 ```
 
 ## Path display
@@ -64,15 +64,15 @@ When teaching a compiler course, you can nest steps to reflect the actual
 compiler phases:
 
 ```rust
-step!("Compile source.rs", {
-    step!("Lexing",    { /* tokenise */ });
-    step!("Parsing",   { /* build AST */ });
-    step!("Type-check", {
-        step!("Check main signature", { … });
-        step!("Infer types",          { … });
-    });
-    step!("Codegen",   { /* emit LLVM IR */ });
-});
+step!["Compile source.rs", {
+    step!["Lexing",    { /* tokenise */ }];
+    step!["Parsing",   { /* build AST */ }];
+    step!["Type-check", {
+        step!["Check main signature", { … }];
+        step!["Infer types",          { … }];
+    }];
+    step!["Codegen",   { /* emit LLVM IR */ }];
+}];
 ```
 
 Each phase is a step; sub-checks are nested steps.  The terminal output

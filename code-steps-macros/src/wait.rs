@@ -9,9 +9,9 @@
 //!
 //! | Syntax                | Behaviour                     |
 //! |-----------------------|-------------------------------|
-//! | `wait!()`             | Always pauses, shows step path |
-//! | `wait!("message")`    | Always pauses, shows custom message |
-//! | `wait!("t1", "t2")`  | Pauses only if filter allows  |
+//! | `wait![]`             | Always pauses, shows step path |
+//! | `wait!["message"]`    | Always pauses, shows custom message |
+//! | `wait!["t1", "t2"]`  | Pauses only if filter allows  |
 //!
 //! ## How it fits
 //!

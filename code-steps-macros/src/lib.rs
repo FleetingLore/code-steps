@@ -45,12 +45,17 @@
 //! **Phase 2 — runtime expansion** ([`step`]):
 //!
 //! ```rust,ignore
+//! // Input:  step!["description", { /* user code */ }]
+//! //         step!["description", "tag"…, { /* user code */ }]
+//! //
+//! // Expands to (simplified):
 //! {
+//!     pause_if_nested(comment);      // if nesting, shows path & pauses
 //!     let __step_guard = enter_step(comment);
 //!     print_step_separator();
 //!     print_step_header(comment);
-//!     print_code(display_str);      // from Phase 1, typewriter if enabled
-//!     let __result = { user code };  // the parsed AST, unmodified
+//!     print_code(display_str);       // from Phase 1, typewriter if enabled
+//!     let __result = { /* user code */ };
 //!     press_any_key_if(&[]);         // auto-pause, shows path if nested
 //!     __result
 //!     // __step_guard drops here → pops path

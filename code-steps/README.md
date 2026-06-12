@@ -6,22 +6,22 @@ Notebook-style code step display for Rust. Show syntax-highlighted code in the t
 
 ```toml
 [dependencies]
-code-steps = "0.3"
+code-steps = "0.4"
 ```
 
 ```rust
 use code_steps::step;
 
 fn main() {
-    step!("Create and save an image", {
+    step!["Create and save an image", {
         let img = Image::new(128, 128);
         img.save("output.png")?;
-    });
+    }];
 
-    step!("Load it back", {
+    step!["Load it back", {
         let img = Image::load("output.png")?;
         assert_eq!(img.width(), 128);
-    });
+    }];
 }
 ```
 
@@ -49,8 +49,8 @@ separator signals the next step.
 
 - **`step!`** — display + execute, with auto-pause and nested path tracking
 - **`wait!`** — mid-step pause (conditional via tags)
-- **`skip!(("tag") { … })`** — code shown, conditionally skipped
-- **`ignore!(("tag") { … })`** — code hidden from display, always executed
+- **`skip![("tag") { … }]`** — code shown, conditionally skipped
+- **`ignore![("tag") { … }]`** — code hidden from display, always executed
 - **Tag filter** — `--include` / `--exclude` on the command line
 - **Typewriter mode** — characters appear one-by-one; press Enter to fast-forward
 - **Syntax highlighting** — powered by [syntect](https://crates.io/crates/syntect), output to stderr
@@ -62,13 +62,13 @@ separator signals the next step.
 `step!` has two forms:
 
 ```rust
-step!("Always runs", {
+step!["Always runs", {
     // no tags → always displays and executes
-});
+}];
 
-step!("Conditional step", "tag1", "tag2", {
+step!["Conditional step", "tag1", "tag2", {
     // only runs if filter allows these tags
-});
+}];
 ```
 
 Tags connect your source code to command-line flags.  Call
@@ -81,24 +81,24 @@ use code_steps::{init_wait_filter, step, ignore};
 fn main() {
     init_wait_filter();
 
-    step!("Setup", "basic", "advanced", {
-        ignore!(("setup") { heavy_init(); })
+    step!["Setup", "basic", "advanced", {
+        ignore![("setup") { heavy_init(); }]
         println!("Ready.");
-    });
+    }];
 
-    step!("Basic analysis", "basic", {
+    step!["Basic analysis", "basic", {
         let data = load_sample();
         println!("Analysing {data:?}…");
-    });
+    }];
 
-    step!("Advanced analysis", "advanced", {
+    step!["Advanced analysis", "advanced", {
         run_heavy_computation();
         println!("Done.");
-    });
+    }];
 
-    step!("Cleanup", {
+    step!["Cleanup", {
         save_results();
-    });
+    }];
 }
 ```
 
@@ -144,7 +144,7 @@ fn main() {
     code_steps::display::set_typewriter_speed(8);      // ms per char (default 15)
     code_steps::display::set_typewriter_line_pause(60); // ms after newline (default 150)
 
-    step!("Demo", { /* types out character by character */ });
+    step!["Demo", { /* types out character by character */ }];
 }
 ```
 
@@ -167,13 +167,13 @@ typewriter-line-pause = 60
 shows the full path:
 
 ```rust
-step!("Compile", {
-    step!("Tokenise", { /* … */ });
-    step!("Parse",    { /* … */ });
-    step!("Type-check", {
-        step!("Check main", { /* … */ });
-    });
-});
+step!["Compile", {
+    step!["Tokenise", { /* … */ }];
+    step!["Parse",    { /* … */ }];
+    step!["Type-check", {
+        step!["Check main", { /* … */ }];
+    }];
+}];
 ```
 
 Terminal output:
@@ -232,12 +232,12 @@ Any syntect theme key works.  Commonly used ones:
 
 | Macro                        | Shows | Executes | Pauses |
 |------------------------------|-------|----------|--------|
-| `step!("desc", { … })`       | yes   | yes      | auto   |
-| `step!("desc", "tag", { … })`| yes   | cond.    | auto   |
-| `wait!()`                    | yes   | —        | yes    |
-| `wait!("t1", "t2")`          | yes   | —        | cond.  |
-| `skip!(("t1") { … })`        | yes   | cond. neg| no     |
-| `ignore!(("t1") { … })`      | no    | yes      | no     |
+| `step!["desc", { … }]`       | yes   | yes      | auto   |
+| `step!["desc", "tag", { … }]`| yes   | cond.    | auto   |
+| `wait![]`                    | yes   | —        | yes    |
+| `wait!["t1", "t2"]`          | yes   | —        | cond.  |
+| `skip![("t1") { … }]`        | yes   | cond. neg| no     |
+| `ignore![("t1") { … }]`      | no    | yes      | no     |
 
 ### Display functions (stderr)
 

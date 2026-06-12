@@ -24,9 +24,9 @@ Create `src/main.rs`:
 use code_steps::step;
 
 fn main() {
-    step!("Hello, code-steps!", {
+    step!["Hello, code-steps!", {
         println!("This is my first step.");
-    });
+    }];
 }
 ```
 

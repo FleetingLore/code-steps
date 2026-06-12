@@ -6,15 +6,15 @@ together — the output of one step feeds into the next.
 ## Basic chaining
 
 ```rust
-let doubled = step!("Double a number", {
+let doubled = step!["Double a number", {
     let n = 21;
     n * 2       // ← returned from the step
-});
+}];
 
-step!("Use the result", {
+step!["Use the result", {
     println!("Doubled value: {doubled}");
     assert_eq!(doubled, 42);
-});
+}];
 ```
 
 The first `step!` evaluates to `42`, which is bound to `doubled`.  The
@@ -29,7 +29,7 @@ won't match the expected type.
 
 ```rust,ignore
 // ❌ Won't compile — tagged step may return () when filtered out
-let data = step!("Load", "basic", { vec![1, 2, 3] });
+let data = step!["Load", "basic", { vec![1, 2, 3] }];
 ```
 
 **Rule**: use Form 1 (no tags) for steps that produce values.  Use Form 2
@@ -39,24 +39,24 @@ let data = step!("Load", "basic", { vec![1, 2, 3] });
 
 ```rust
 // Always runs, produces data
-let raw = step!("Load data", {
+let raw = step!["Load data", {
     load_from_file("input.csv")
-});
+}];
 
 // Always runs, transforms
-let clean = step!("Clean", {
+let clean = step!["Clean", {
     raw.into_iter().filter(|r| r.is_valid()).collect()
-});
+}];
 
 // Only runs when "basic" is active
-step!("Basic stats", "basic", {
+step!["Basic stats", "basic", {
     println!("Mean: {}", clean.mean());
-});
+}];
 
 // Only runs when "advanced" is active
-step!("Advanced stats", "advanced", {
+step!["Advanced stats", "advanced", {
     println!("Std dev: {}", clean.std_dev());
-});
+}];
 ```
 
 This pattern keeps the pipeline running regardless of which analysis

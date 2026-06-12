@@ -6,10 +6,10 @@ execution at runtime.
 ## Syntax
 
 ```rust
-skip!(("tag1", "tag2") { /* code shown, conditionally skipped */ })
+skip![("tag1", "tag2") { /* code shown, conditionally skipped */ }]
 ```
 
-Note the double parentheses: `(("tag") { body })`.  The outer `()` belong to
+Note the double parentheses: `(("tag") { body })`.  The outer `[]` belong to
 the macro invocation; the inner `("tag")` wraps the tags, followed by the
 block.
 
@@ -21,7 +21,7 @@ runs normally.
 
 ```rust,ignore
 // User writes:
-skip!(("debug") { dbg!(x); })
+skip![("debug") { dbg!(x); }]
 
 // Expands to:
 if !filter_matches(&["debug"]) {

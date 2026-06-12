@@ -7,14 +7,14 @@ support tags: `step!`, `wait!`, `skip!`, and `ignore!`.
 
 ```rust
 // step! — tags between description and block
-step!("Description", "tag1", "tag2", { … });
+step!["Description", "tag1", "tag2", { … }];
 
 // wait! — tags inside parens
-wait!("tag1", "tag2");
+wait!["tag1", "tag2"];
 
 // skip! and ignore! — tags in inner parens before the block
-skip!(("tag1", "tag2") { … });
-ignore!(("tag1", "tag2") { … });
+skip![("tag1", "tag2") { … }];
+ignore![("tag1", "tag2") { … }];
 ```
 
 ## What tags do

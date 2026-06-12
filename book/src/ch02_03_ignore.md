@@ -6,7 +6,7 @@ executes** at runtime but is **hidden** from the terminal display.
 ## Syntax
 
 ```rust
-ignore!(("tag") { /* code runs but is hidden */ })
+ignore![("tag") { /* code runs but is hidden */ }]
 ```
 
 ## How it works
@@ -23,14 +23,14 @@ overhead:
 
 ```rust,ignore
 // User writes:
-ignore!(("setup") { heavy_init(); })
+ignore![("setup") { heavy_init(); }]
 
 // Expands to:
 { { heavy_init(); } }
 ```
 
 Meanwhile, `step!`'s Phase 1 scans the raw source text and replaces every
-`ignore!(…) { … }` block with `// (ignored)`.  This is pure text replacement
+`ignore![…] { … }` block with `// (ignored)`.  This is pure text replacement
 at compile time.
 
 ## Use case: hiding repeated setup

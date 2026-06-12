@@ -1,7 +1,7 @@
 # Auto-Pause & Path Display
 
 `step!` automatically pauses at the end of every step.  No need to
-manually insert `wait!()` at step boundaries.
+manually insert `wait![]` at step boundaries.
 
 ## How it looks
 
@@ -40,7 +40,7 @@ contains `return` or `?` the path is correctly restored.
 
 ## Why auto-pause?
 
-Before auto-pause, every step needed an explicit `wait!()` at the end.
+Before auto-pause, every step needed an explicit `wait![]` at the end.
 This was repetitive and error-prone.  Auto-pause makes `step!` self-contained:
-each step naturally stops so you can explain it.  Use `wait!()` only when
+each step naturally stops so you can explain it.  Use `wait![]` only when
 you need mid-step pauses or conditional checkpoints.

@@ -5,9 +5,9 @@
 ## Form 1 — No tags (always runs)
 
 ```rust
-step!("Description", {
+step!["Description", {
     // This always displays and executes.
-});
+}];
 ```
 
 The expansion wraps the block with display calls and auto-pause.  No filter
@@ -16,9 +16,9 @@ check — it runs unconditionally.
 ## Form 2 — With tags (conditional)
 
 ```rust
-step!("Description", "tag1", "tag2", {
+step!["Description", "tag1", "tag2", {
     // This only runs if the filter allows these tags.
-});
+}];
 ```
 
 The expansion adds a runtime `if filter_matches(&["tag1", "tag2"])` guard.

@@ -38,7 +38,7 @@ fn main() {
     // pushing.  The debug version traces every step — useful to show
     // the concept, noisy to run every time.
 
-    step!("Mutable borrow: clean vs debug", {
+    step!["Mutable borrow: clean vs debug", {
         let mut data = vec![10, 20, 30];
 
         // ── Clean version (always runs) ──
@@ -50,7 +50,7 @@ fn main() {
 
         // ── Debug version (shown, skipped when tag is active) ──
         // Expands each step into a trace: "borrow here → drop here → mutate".
-        code_steps::skip!(("debug-borrow") {
+        code_steps::skip![("debug-borrow") {
             let mut data2 = vec![10, 20, 30];
             println!("  [trace] allocating vec at {:p}", &data2);
             {
@@ -61,8 +61,8 @@ fn main() {
             println!("  [trace] borrow dropped, safe to mutate");
             data2.push(40);
             println!("  [trace] pushed 40 → {data2:?}");
-        });
-    });
+        }];
+    }];
 
     // ═══════════════════════════════════════════════════════════════════
     // Demo 2: ownership & clone — minimal vs detailed
@@ -71,7 +71,7 @@ fn main() {
     // The rule: moving a String transfers ownership.  The clean version
     // clones before the move.  The debug version traces every allocation.
 
-    step!("Use after move: clean vs debug", {
+    step!["Use after move: clean vs debug", {
         let name = String::from("Rust");
 
         // ── Clean version (always runs) ──
@@ -79,7 +79,7 @@ fn main() {
         println!("{greeting}");
 
         // ── Debug version (shown, skipped when tag is active) ──
-        code_steps::skip!(("debug-borrow") {
+        code_steps::skip![("debug-borrow") {
             let name2 = String::from("Rust");
             println!("  [trace] name2 allocated at {:p} (len={})",
                      name2.as_ptr(), name2.len());
@@ -88,21 +88,21 @@ fn main() {
                      greeting2.as_ptr(), greeting2.len());
             // name2 is now invalid — can't use it.
             println!("  [trace] greeting = \"{greeting2}\"");
-        });
-    });
+        }];
+    }];
 
     // ═══════════════════════════════════════════════════════════════════
     // Demo 3: unsafe vs safe — concept demo
     // ═══════════════════════════════════════════════════════════════════
 
-    step!("Raw pointer vs reference", {
+    step!["Raw pointer vs reference", {
         // ── Safe version (always runs) ──
         let x = 42;
         let r = &x;
         println!("Safe reference: {r}");
 
         // ── Unsafe version (shown, skipped when tag is active) ──
-        code_steps::skip!(("debug-unsafe") {
+        code_steps::skip![("debug-unsafe") {
             let x = 42;
             let r: *const i32 = &x;
             let addr = r as usize;
@@ -110,6 +110,6 @@ fn main() {
             unsafe {
                 println!("  [trace] dereferenced: {}", *r);
             }
-        });
-    });
+        }];
+    }];
 }
